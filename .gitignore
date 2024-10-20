@@ -1,0 +1,5 @@
+venv/
+service-account-key.json
+firebase
+node_modules/
+__pycache__/
