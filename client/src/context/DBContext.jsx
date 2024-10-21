@@ -89,7 +89,19 @@ export const DBProvider = ({ children }) => {
         const classDocRef = doc(classCollectionRef, id);
         const studentCollectionRef = collection(classDocRef, "Students");
 
-        const storageRef = ref(storage, `images/${studentID}.png`);
+        const storageRef = ref(storage, `${studentID}.png`);
+
+        try {
+          await getDownloadURL(storageRef);
+          console.log("File already exists. Upload canceled.");
+          return;
+        } catch (error) {
+          if (error.code !== "storage/object-not-found") {
+            console.error("Error checking file existence:", error);
+            return;
+          }
+        }
+
         await uploadBytes(storageRef, imgFile);
         const imageUrl = await getDownloadURL(storageRef);
 
@@ -114,6 +126,76 @@ export const DBProvider = ({ children }) => {
       console.error("Error in adding student:", error);
     }
   };
+
+  const RecordAttendance = async (classID, session, studentData) => {
+    try {
+      if (!auth.currentUser) {
+        throw new Error("User is not authenticated.");
+      }
+
+      if (!classID) {
+        throw new Error("Class ID is required.");
+      }
+
+      const userDocRef = doc(firestore, "Users", auth.currentUser.uid);
+      const classDocRef = doc(userDocRef, "Classes", classID);
+      const attendanceCollectionRef = collection(classDocRef, "Attendance");
+
+      const dateToday = new Date().toISOString().split("T")[0];
+
+      const presentStudents = [];
+
+      for (const student of studentData) {
+        const { firstName, lastName, email, studentID, imgFile } = student;
+
+        const storageRef = ref(storage, `images/${studentID}.png`);
+        await uploadBytes(storageRef, imgFile);
+        const imageUrl = await getDownloadURL(storageRef);
+
+        presentStudents.push({
+          firstName,
+          lastName,
+          email,
+          studentID,
+          studentImage: imageUrl,
+          last_attendance_time: new Date().toISOString(),
+        });
+      }
+
+      await addDoc(attendanceCollectionRef, {
+        session,
+        dateToday,
+        present_students: presentStudents,
+        createdAt: serverTimestamp(),
+      });
+
+      console.log("Attendance recorded successfully!");
+    } catch (error) {
+      console.error("Error in recording attendance:", error);
+    }
+  };
+
+  const subscribetoAttendanceChanges = async (id, callback) => {
+    try{
+      if(auth.currentUser){
+        const userDocRef = doc(usersCollectionRef, auth.currentUser.uid);
+        const classCollectionRef = collection(userDocRef, "Classes");
+        const classDocRef = doc(classCollectionRef, id);
+        const attendanceCollectionRef = collection(classDocRef, "Attendance");
+
+        const unsubscribe = onSnapshot(attendanceCollectionRef, (snapshot) => {
+          const attendanceData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          callback(attendanceData)
+        })
+          return unsubscribe
+      }
+    }catch(error){
+
+    }
+  }
 
   const subscribetoStudentChanges = async (id, callback) => {
     try {
@@ -160,6 +242,8 @@ export const DBProvider = ({ children }) => {
     MakeClass,
     getClassInfo,
     AddStudent,
+    RecordAttendance,
+    subscribetoAttendanceChanges,
     subscribetoClassesChanges,
     subscribetoStudentChanges,
   };

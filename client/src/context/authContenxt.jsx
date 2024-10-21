@@ -51,11 +51,19 @@ export const AuthProvider = ({ children }) => {
       alert("Logged in successfully!");
     } catch (error) {
       console.error("Error occurred during login:", error);
-      alert("Login failed: " + (error.message || "An unexpected error occurred."));
+      alert(
+        "Login failed: " + (error.message || "An unexpected error occurred.")
+      );
     }
   }
 
-  async function CreateUser(email, password, confirmPassword, firstName, lastName) {
+  async function CreateUser(
+    email,
+    password,
+    confirmPassword,
+    firstName,
+    lastName
+  ) {
     if (currentUser) {
       alert("A user is already logged in.");
       return;
@@ -71,7 +79,11 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       await updateProfile(user, {
@@ -91,29 +103,27 @@ export const AuthProvider = ({ children }) => {
       return user;
     } catch (error) {
       console.error("Error in signing up:", error);
-      alert("Sign-up failed: " + (error.message || "An unexpected error occurred."));
+      alert(
+        "Sign-up failed: " + (error.message || "An unexpected error occurred.")
+      );
     }
   }
 
   async function Logout() {
-    if (!currentUser) {
-      alert("No user is currently logged in.");
-      return;
-    }
-
     try {
-      const uid = auth.currentUser.uid;
-      const usersDocRef = doc(usersCollectionRef, uid);
-      await updateDoc(usersDocRef, {
-        isOnline: false,
-      });
+      if (currentUser) {
+        const uid = auth.currentUser.uid;
+        const usersDocRef = doc(usersCollectionRef, uid);
 
-      await signOut(auth);
-      setCurrentUser(null); // Clear current user on logout
-      alert("Logged out successfully!");
+        await updateDoc(usersDocRef, { isOnline: false });
+
+        await signOut(auth);
+        setCurrentUser(null); // Clear the state after logout
+        alert("Logged out successfully!");
+      }
     } catch (error) {
-      console.error("Error in logging out:", error);
-      alert("Logout failed: " + (error.message || "An unexpected error occurred."));
+      console.error("Logout error details:", error);
+      alert("Logout failed: " + error.message);
     }
   }
 

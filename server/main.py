@@ -61,6 +61,7 @@ def setup_streaming(socketio: SocketIO):
                 if not success:
                     print("Failed to capture frame. Exiting...")
                     socketio.emit('stop_stream')
+                    streaming = False
                     break
 
                 imgS = cv2.resize(img, (0, 0), None, 0.25, 0.25)
@@ -108,6 +109,16 @@ def setup_streaming(socketio: SocketIO):
 
     
 
+    @socketio.on("request_students_data")
+    def handle_request_students_data(data):
+        """Re-emit students data upon client request."""
+        classid = data.get("classid")
+        print(f"Received request to resend student data for class: {classid}")
+
+        students_data_serialized = [
+            serialize_student_info(student) for student in present_students
+        ]
+        emit("students_data", {"data": json.dumps(students_data_serialized)})
 
     @socketio.on('start_stream')
     def handle_start_stream(data):
