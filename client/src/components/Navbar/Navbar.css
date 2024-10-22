@@ -1,0 +1,10 @@
+.link-Login {
+    text-decoration: none;
+    border: 1px solid white;
+    padding: 10px 25px;
+    border-radius: 7px;
+  }
+
+  .logo-wrapper img {
+    width: 90px;
+  }

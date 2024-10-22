@@ -1,26 +1,37 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../../context/authContenxt'
-
+import React from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../context/authContenxt";
+import logo from "../../images/logo.png";
+import "./Navbar.css";
 
 export const Navbar = () => {
-  const {currentUser, Logout} = useAuth()
+  const { currentUser, Logout } = useAuth();
 
   const handleLogout = async () => {
-    await Logout()
-  }
+    await Logout();
+  };
 
   return (
-    <div className='flex flex-row items-center justify-between h-[80px] w-full px-20 py-5 bg-[#323232] fixed'>
-        <div className="logo-wrapper w-1/2">
-            <img src='' alt='logo' />
-        </div>
-        <div className="nav-links w-1/2 flex flex-row justify-around">
-            <Link to='/private/dashboard'>Dashboard</Link>
-            <Link to='#'>About US</Link>
-            <Link to='#'>Contact US</Link>
-            {currentUser? <><button onClick={handleLogout}>Logout</button></> : <><Link to='/auth/Login'>Login</Link><Link to='/auth/Signup'>Sign Up</Link></>}
-        </div>
+    <div className="flex flex-row items-center justify-between h-[80px] w-full px-20 py-5 bg-[#1F1E1E] fixed">
+      <div className="logo-wrapper w-1/2">
+        <img src={logo} alt="logo" />
+      </div>
+      <div className="nav-links w-1/2 flex flex-row items-center justify-around text-white">
+        <Link to="/private/dashboard">HOME</Link>
+        <a href="#about">ABOUT US</a>
+        <a href="#contact">CONTACT US</a>
+        {currentUser ? (
+          <>
+            <button onClick={handleLogout}>LOGOUT</button>
+          </>
+        ) : (
+          <>
+            <Link to="/auth/Login" className="link-Login">
+              LOG IN
+            </Link>
+          </>
+        )}
+      </div>
     </div>
-  )
-}
+  );
+};
