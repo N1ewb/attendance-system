@@ -16,7 +16,8 @@ const Attendancepage = () => {
   const [imageSrc, setImageSrc] = useState(null);
   const [presentStudent, setPresentStudents] = useState([]);
   const attendanceSessionRef = useRef();
-  const initializeSocket = useCallback(() => {
+
+  useEffect(() => {
     console.log("Initializing connection with WebSocket...");
 
     const socketURL =
@@ -36,25 +37,7 @@ const Attendancepage = () => {
       console.log("Disconnected from server");
       setSocket(null);
     });
-
-    return newSocket;
   }, []);
-
-  useEffect(() => {
-    const socketInstance = initializeSocket();
-
-    return () => {
-      console.log("Cleaning up socket connection...");
-      socketInstance.disconnect();
-    };
-  }, [initializeSocket]);
-
-  useEffect(() => {
-    if (!socket) {
-      console.warn("Socket was undefined, reinitializing...");
-      initializeSocket();
-    }
-  }, [socket, initializeSocket]);
 
   useEffect(() => {
     if (socket && isStreaming) {
@@ -101,10 +84,18 @@ const Attendancepage = () => {
             const json_form = JSON.parse(data.data);
             console.log("Parsed JSON:", json_form);
 
-            if (Array.isArray(json_form)) {
-              setPresentStudents((prevData) => [...prevData, ...json_form]);
-            } else {
-              console.error("Parsed JSON is not an array:", json_form);
+            if (json_form) {
+              setPresentStudents((prevData) => {
+                const isPresent = prevData.some(
+                  (student) => student.id === json_form.id
+                );
+
+                if (isPresent) {
+                  return prevData;
+                }
+
+                return [...prevData, json_form];
+              });
             }
           } catch (error) {
             console.error("Error parsing JSON data:", error);
@@ -122,6 +113,14 @@ const Attendancepage = () => {
       };
     }
   }, [socket, isStreaming, classid]);
+
+  useEffect(() => {
+    if (currentUser && socket && socket.connected && classid) {
+      const userID = currentUser.uid;
+      socket.emit("load_student_data", userID, classid);
+      socket.emit("load_images");
+    }
+  }, [socket, classid, currentUser]);
 
   const handleStart = () => {
     if (socket && socket.connected && classid) {

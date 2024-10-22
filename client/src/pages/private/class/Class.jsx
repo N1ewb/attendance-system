@@ -29,9 +29,9 @@ function Class() {
           <header>
             <h1 className="font-bold text-[28px]">{thisClass.SubjectCode}</h1>
           </header>
-          <main className="flex flex-row w-full justify-between">
+          <main className="flex flex-row w-full h-full justify-between">
             <Attendance id={classid} />
-            <div className="students w-[35%] max-h-[80%] overflow-auto">
+            <div className="students w-[35%] h-full ">
               <Students id={classid} />
             </div>
           </main>

@@ -5,6 +5,7 @@ import numpy as np
 import cvzone
 from firebase.firebase import db, storage_bucket, firestore_client
 from firebase.db import add_attendance_session
+from firebase.storage import get_all_images_from_storage
 from datetime import datetime
 from flask_socketio import SocketIO
 import eventlet
@@ -17,9 +18,12 @@ def encode_image_to_base64(img):
     img_base64 = base64.b64encode(buffer).decode('utf-8')
     return img_base64
 
+encodeListKnown = []
+studentIds = []
 present_students = []
-
+students_dict = {}
 streaming = False
+
 def setup_streaming(socketio: SocketIO):
     print('Main is Running')
 
@@ -31,6 +35,27 @@ def setup_streaming(socketio: SocketIO):
     def handle_disconnect():
         print('Client Disconnected')
 
+    @socketio.on('load_student_data')
+    def handle_load_student_data(user_id, class_id):
+        global students_dict
+        students_data = get_student(user_id, class_id)
+        students_dict = {student.get('studentID'): student for student in students_data}  
+
+    @socketio.on('load_images')
+    def handle_load_images():
+        global encodeListKnown
+        global studentIds
+
+        try:
+            encodeListKnown, studentIds = get_all_images_from_storage()
+            if isinstance(encodeListKnown, list) and isinstance(studentIds, list):
+                print(f"Loaded {len(encodeListKnown)} encodings and {len(studentIds)} student IDs.")
+            else:
+                print("Failed to load images: Invalid data structure returned.")
+
+        except Exception as e:
+            print(f"Error in handle_load_images: {str(e)}")
+    
     def start_stream():
         cap = cv2.VideoCapture(0)
         cap.set(3, 640)
@@ -39,12 +64,9 @@ def setup_streaming(socketio: SocketIO):
         modes = ['active', 'info', 'marked', 'alreadyMarked']
         print("Loading Encoded Files")
         
-        with open('EncodeFile.p', 'rb') as file:
-            encodeListKnown, studentIds = pickle.load(file)
-        print("Encoded Files Loaded Successfully")
-
-        students_data = get_student(user_id, class_id)
-        students_dict = {student.get('studentID'): student for student in students_data}  # Create the dictionary
+        # with open('EncodeFile.p', 'rb') as file:
+        #     encodeListKnown, studentIds = pickle.load(file)
+        # print(f"Encoded Files Loaded Successfully: {encodeListKnown}")
 
         print("Loaded students data")
         print(f"Students Dictionary: {students_dict}")
@@ -82,9 +104,8 @@ def setup_streaming(socketio: SocketIO):
                             print("Matching ID Detected")
                             print(f"ID: {id}, Student Info: {studentInfo}") 
                             
-                            if studentInfo not in present_students:
-                                present_students.append(studentInfo)
-                                present_students_serialized = [serialize_student_info(student) for student in present_students]
+                            if studentInfo not in present_students and studentInfo is not None: 
+                                present_students_serialized = serialize_student_info(studentInfo)
                                 socketio.emit('students_data', {"data": json.dumps(present_students_serialized)})
                                 print(f"New student marked present: {studentInfo.get('firstName', 'Unknown')} {studentInfo.get('lastName', 'Unknown')}")
                             
