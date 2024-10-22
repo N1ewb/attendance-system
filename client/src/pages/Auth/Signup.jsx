@@ -1,6 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { useAuth } from "../../context/authContenxt";
 import { useNavigate } from "react-router-dom";
+import Cirlce1 from "../../images/Circle1.png";
+import Cirlce2 from "../../images/Circle2.png";
+import Cirlce3 from "../../images/Circle3.png";
+import "./Signup.css";
 
 function Signup() {
   const auth = useAuth();
@@ -8,8 +12,8 @@ function Signup() {
   const emailRef = useRef();
   const passwordRef = useRef();
   const confirmPasswordRef = useRef();
-  const firstNameRef = useRef()
-  const lastNameRef = useRef()
+  const firstNameRef = useRef();
+  const lastNameRef = useRef();
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -17,8 +21,8 @@ function Signup() {
     const email = emailRef.current.value;
     const password = passwordRef.current.value;
     const confirmPassword = confirmPasswordRef.current.value;
-    const firstName = firstNameRef.current.value
-    const lastName = lastNameRef.current.value
+    const firstName = firstNameRef.current.value;
+    const lastName = lastNameRef.current.value;
 
     if (!email || !password || !confirmPassword || !firstName || !lastName) {
       alert("All fields are required.");
@@ -36,7 +40,13 @@ function Signup() {
     }
 
     try {
-      await auth.CreateUser(email, password, confirmPassword, firstName, lastName);
+      await auth.CreateUser(
+        email,
+        password,
+        confirmPassword,
+        firstName,
+        lastName
+      );
     } catch (error) {
       console.error(`Error during registration: ${error}`);
       alert("An error occurred during signup. Please try again.");
@@ -47,53 +57,78 @@ function Signup() {
     if (auth.currentUser) {
       navigate("/private/dashboard");
     }
-  }, [auth.currentUser, navigate]); 
+  }, [auth.currentUser, navigate]);
 
   return (
-    <form
-      className="h-screen w-full flex flex-col justify-center items-center gap-5 [&_input]:border-solid [&_input]:border-2 [&_input]:border-green-900 [&_input]:rounded-md"
-      onSubmit={handleSignup}
-    >
-      <h1 className="text-[28px] text-green-950">Signup</h1>
-      <div className="group flex flex-col items-center">
-        <label htmlFor="firstname">First Name</label>
-        <input id="firstname" type="text" name="firstname" ref={firstNameRef} />
+    <>
+      <div className="bgs">
+        <div className="form-container">
+          <div className="rightpage">
+            <div className="dots">
+              <img src={Cirlce1} alt="Circle" />
+              <img src={Cirlce2} alt="Circle" />
+              <img src={Cirlce3} alt="Circle" />
+            </div>
+            <form onSubmit={handleSignup}>
+              <h1 className="signup">Signup</h1>
+              <div className="inputl">
+                <input
+                  id="firstname"
+                  type="text"
+                  name="firstname"
+                  placeholder="Enter your first name"
+                  ref={firstNameRef}
+                  required
+                />
+                <input
+                  id="lastName"
+                  type="text"
+                  name="lastName"
+                  placeholder="Enter your last name"
+                  ref={lastNameRef}
+                  required
+                />
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  placeholder="Enter email"
+                  ref={emailRef}
+                  required
+                />
+                <input
+                  id="password"
+                  type="password"
+                  name="password"
+                  placeholder="Enter password"
+                  ref={passwordRef}
+                  required
+                />
+                <input
+                  id="confirm-password"
+                  type="password"
+                  name="confirm-password"
+                  placeholder="Confirm password"
+                  ref={confirmPasswordRef}
+                  required
+                />
+              </div>
+              <button type="submit" className="bttns">
+                Sign Up
+              </button>
+            </form>
+          </div>
+          <div className="leftpage">
+            <div className="dots">
+              <p></p>
+            </div>
+            <h1 className="rtext">
+              BRINGING <span>IOT</span> TO LIFE.
+            </h1>
+          </div>
+        </div>
       </div>
-      <div className="group flex flex-col items-center">
-        <label htmlFor="lastName">Last Name</label>
-        <input id="lastName" type="text" name="lastName" ref={lastNameRef} />
-      </div>
-      <div className="group flex flex-col items-center">
-        <label htmlFor="email">Email</label>
-        <input id="email" type="email" name="email" ref={emailRef} required />
-      </div>
-      <div className="group flex flex-col items-center">
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          name="password"
-          ref={passwordRef}
-          required
-        />
-      </div>
-      <div className="group flex flex-col items-center">
-        <label htmlFor="confirm-password">Confirm Password</label>
-        <input
-          id="confirm-password"
-          type="password"
-          name="confirm-password"
-          ref={confirmPasswordRef}
-          required
-        />
-      </div>
-      <button
-        type="submit"
-        className="text-white rounded-md px-10 py-3 bg-green-600"
-      >
-        Signup
-      </button>
-    </form>
+    </>
   );
 }
 
