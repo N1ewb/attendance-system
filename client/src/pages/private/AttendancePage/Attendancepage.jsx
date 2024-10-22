@@ -197,7 +197,7 @@ const Attendancepage = () => {
               ? presentStudent.map((student, index) => (
                   <div
                     key={index}
-                    className="flex flex-row p-5 shadow-md rounded-md gap-5"
+                    className="flex flex-row justify-between w-full p-5 shadow-md rounded-md gap-5"
                   >
                     <p>
                       {student.firstName} {student.lastName}
@@ -205,6 +205,9 @@ const Attendancepage = () => {
                     <p>
                       Status: <span className="text-green-700">Present</span>
                     </p>
+                   <div className="wrapper h-[80px] w-[80px]">
+                   <img src={student.studentImage} alt="Student Photo" className="object-center object-fill h-full w-full" />
+                   </div>
                   </div>
                 ))
               : "No Students attended yet"}

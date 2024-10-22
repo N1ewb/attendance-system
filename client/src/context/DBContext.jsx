@@ -89,7 +89,7 @@ export const DBProvider = ({ children }) => {
         const classDocRef = doc(classCollectionRef, id);
         const studentCollectionRef = collection(classDocRef, "Students");
 
-        const storageRef = ref(storage, `${studentID}.png`);
+          
 
         try {
           await getDownloadURL(storageRef);
