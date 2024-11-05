@@ -165,6 +165,11 @@ const Attendancepage = () => {
       handleStop();
     }
   };
+  const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
+  const formattedDate = (date) => {
+    return date.toLocaleString('en-US', options);
+  } 
+    
 
   return (
     <div className="pt-32 h-screen w-full flex flex-col gap-5 px-10 items-center">
@@ -205,6 +210,7 @@ const Attendancepage = () => {
                     <p>
                       Status: <span className="text-green-700">Present</span>
                     </p>
+                    <p>Timestamp <span>{formattedDate(student.last_attendance_time)}</span></p>
                    <div className="wrapper h-[80px] w-[80px]">
                    <img src={student.studentImage} alt="Student Photo" className="object-center object-fill h-full w-full" />
                    </div>
