@@ -21,8 +21,8 @@ function AddClassModal({ show, setShow }) {
 
     try {
       if (subjectcode && offernumber && description && units) {
-        await db.MakeClass(subjectcode,offernumber, description, units);
-        alert("Sucessfuly made class")
+        const res = await db.MakeClass(subjectcode,offernumber, description, units);
+        alert(res)
       }
     } catch (error) {
         alert("Error in making new class")

@@ -22,14 +22,14 @@ function AddStudentModal({ id, show, setShow }) {
     const studentId = studentIdRef.current.value;
     const imageFile = imageRef.current.files[0];
 
-    if (!firstName || !lastName || !email || !studentId || !imageFile) {
+    if (!firstName || !lastName || !email || !studentId || !imageFile || !id) {
       alert("All fields are required!");
       return;
     }
 
     try {
-      await db.AddStudent(id, firstName, lastName, email, studentId, imageFile);
-      alert("Successfully added student!");
+      const res = await db.AddStudent(id, firstName, lastName, email, studentId, imageFile);
+      alert(res.message)
       e.target.reset();
     } catch (error) {
       alert("Error in adding new student");

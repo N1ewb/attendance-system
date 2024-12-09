@@ -6,7 +6,7 @@ setuptools>=68.0.0
 cvzone==1.6.1
 firebase==4.0.1
 firebase-admin==6.5.0
-Flask\[async\]==2.2.5
+#Flask\[async\]==2.2.5
 Flask-SocketIO==5.3.3
 Flask-Cors==3.0.10
 python-socketio==5.7.2

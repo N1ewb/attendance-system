@@ -37,12 +37,12 @@ export const DBProvider = ({ children }) => {
           createdAt: serverTimestamp(),
         });
 
-        console.log("Class created successfully!");
+        return { message: "Class added succesfully" };
       } else {
-        console.error("User is not authenticated.");
+        return { message: "User is not authenticated" };
       }
     } catch (error) {
-      console.error("Error in making new class:", error.message);
+      return { message: `Error in making class ${error.message}` };
     }
   };
 
@@ -89,7 +89,10 @@ export const DBProvider = ({ children }) => {
         const classDocRef = doc(classCollectionRef, id);
         const studentCollectionRef = collection(classDocRef, "Students");
 
-          
+        const storageRef = ref(
+          storage,
+          `students/${id}/${studentID}-${imgFile.name}`
+        );
 
         try {
           await getDownloadURL(storageRef);
@@ -118,15 +121,14 @@ export const DBProvider = ({ children }) => {
           studentImage: imageUrl,
         });
 
-        console.log("Student added successfully!");
+        return { message: "Successfully added student" };
       } else {
-        throw new Error("User is not authenticated.");
+        return { message: "User is not authenticated" };
       }
     } catch (error) {
-      console.error("Error in adding student:", error);
+      return { message: `Error in adding student: ${error.message}` };
     }
   };
-
   const RecordAttendance = async (classID, session, studentData) => {
     try {
       if (!auth.currentUser) {
@@ -176,8 +178,8 @@ export const DBProvider = ({ children }) => {
   };
 
   const subscribetoAttendanceChanges = async (id, callback) => {
-    try{
-      if(auth.currentUser){
+    try {
+      if (auth.currentUser) {
         const userDocRef = doc(usersCollectionRef, auth.currentUser.uid);
         const classCollectionRef = collection(userDocRef, "Classes");
         const classDocRef = doc(classCollectionRef, id);
@@ -186,16 +188,14 @@ export const DBProvider = ({ children }) => {
         const unsubscribe = onSnapshot(attendanceCollectionRef, (snapshot) => {
           const attendanceData = snapshot.docs.map((doc) => ({
             id: doc.id,
-            ...doc.data()
-          }))
-          callback(attendanceData)
-        })
-          return unsubscribe
+            ...doc.data(),
+          }));
+          callback(attendanceData);
+        });
+        return unsubscribe;
       }
-    }catch(error){
-
-    }
-  }
+    } catch (error) {}
+  };
 
   const subscribetoStudentChanges = async (id, callback) => {
     try {
