@@ -2,6 +2,7 @@ import { useRef } from "react";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import { useDB } from "../../context/DBContext";
+import {toast} from 'react-hot-toast'
 
 function AddStudentModal({ id, show, setShow }) {
   const db = useDB();
@@ -23,16 +24,20 @@ function AddStudentModal({ id, show, setShow }) {
     const imageFile = imageRef.current.files[0];
 
     if (!firstName || !lastName || !email || !studentId || !imageFile || !id) {
-      alert("All fields are required!");
+      toast.error("All fields are required!");
       return;
     }
 
     try {
       const res = await db.AddStudent(id, firstName, lastName, email, studentId, imageFile);
-      alert(res.message)
+      if(res.status === 'success'){
+        toast.success(res.message)
+      }else {
+        toast.error(res.message)
+      }
       e.target.reset();
     } catch (error) {
-      alert("Error in adding new student");
+      toast.error("Error in adding new student");
       console.error("Error:", error);
     } finally {
       handleClose();

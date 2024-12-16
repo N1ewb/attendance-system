@@ -81,20 +81,20 @@ export const DBProvider = ({ children }) => {
       if (auth.currentUser) {
         const userDocRef = doc(usersCollectionRef, auth.currentUser.uid);
         const classCollectionRef = collection(userDocRef, "Classes");
-
+  
         if (!id) {
           throw new Error("Class ID is required.");
         }
-
+  
         const classDocRef = doc(classCollectionRef, id);
         const studentCollectionRef = collection(classDocRef, "Students");
-
-        const storageRef = ref(
-          storage,
-          `students/${id}/${studentID}-${imgFile.name}`
-        );
-
+  
+        // Adjusted storage path to store images under the correct directory structure
+        const storagePath = `users/${auth.currentUser.uid}/Classes/${id}/Students/${studentID}.jpg`;
+        const storageRef = ref(storage, storagePath);
+  
         try {
+          // Check if the file already exists at the specified path
           await getDownloadURL(storageRef);
           console.log("File already exists. Upload canceled.");
           return;
@@ -104,10 +104,12 @@ export const DBProvider = ({ children }) => {
             return;
           }
         }
-
+  
+        // Upload image to the storage
         await uploadBytes(storageRef, imgFile);
         const imageUrl = await getDownloadURL(storageRef);
-
+  
+        // Add student document to Firestore
         await addDoc(studentCollectionRef, {
           firstName,
           lastName,
@@ -120,15 +122,17 @@ export const DBProvider = ({ children }) => {
           last_attendance_time: new Date().toISOString(),
           studentImage: imageUrl,
         });
-
-        return { message: "Successfully added student" };
+  
+        return { message: "Successfully added student", status: 'success' };
       } else {
-        return { message: "User is not authenticated" };
+        return { message: "User is not authenticated", status: 'failed' };
       }
     } catch (error) {
-      return { message: `Error in adding student: ${error.message}` };
+      return { message: `Error in adding student: ${error.message}`, status: 'failed' };
     }
   };
+  
+
   const RecordAttendance = async (classID, session, studentData) => {
     try {
       if (!auth.currentUser) {

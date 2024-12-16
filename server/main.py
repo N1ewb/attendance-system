@@ -57,10 +57,16 @@ def setup_streaming(socketio: SocketIO):
             print(f"Error in handle_load_images: {str(e)}")
     
     def start_stream():
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0)   
         cap.set(3, 640)
         cap.set(4, 480)
         
+        print("Starting video stream...")
+        if not encodeListKnown or not studentIds:
+            print("No encodings loaded. Exiting stream...")
+            cap.release()
+            return
+
         modes = ['active', 'info', 'marked', 'alreadyMarked']
         print("Loading Encoded Files")
         

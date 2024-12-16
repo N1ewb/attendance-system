@@ -3,6 +3,8 @@ import { useLocation } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "../../../context/authContenxt";
 import { useDB } from "../../../context/DBContext";
+import toast from "react-hot-toast";
+import debounce from "lodash/debounce";
 
 const Attendancepage = () => {
   const db = useDB();
@@ -15,29 +17,109 @@ const Attendancepage = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [imageSrc, setImageSrc] = useState(null);
   const [presentStudent, setPresentStudents] = useState([]);
+  const [studentCache, setStudentCache] = useState({});
   const attendanceSessionRef = useRef();
 
+  const handleStudentData = useCallback((data) => {
+    if (data && data.data) {
+      try {
+        const newStudent = JSON.parse(data.data);
+        
+        setPresentStudents((prevStudents) => {
+          // Use Set to ensure unique students
+          const studentSet = new Set(prevStudents.map(s => s.id));
+          
+          if (!studentSet.has(newStudent.id)) {
+            return [...prevStudents, newStudent];
+          }
+          return prevStudents;
+        });
+      } catch (error) {
+        console.error("Error parsing student data:", error);
+      }
+    }
+  }, []);
+
   useEffect(() => {
-    console.log("Initializing connection with WebSocket...");
-
-    const socketURL =
-      window.location.hostname === "localhost" ? "http://127.0.0.1:5000" : "";
-
+    const socketURL = window.location.hostname === "localhost" 
+      ? "http://127.0.0.1:5000" 
+      : window.location.origin;
+  
     const newSocket = io(socketURL, {
       transports: ["websocket"],
       withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     });
-
-    newSocket.on("connect", () => {
+  
+    const handleConnect = () => {
       console.log("Connected to server");
       setSocket(newSocket);
-    });
-
-    newSocket.on("disconnect", () => {
+    };
+  
+    const handleDisconnect = () => {
       console.log("Disconnected from server");
       setSocket(null);
-    });
+    };
+  
+    newSocket.on("connect", handleConnect);
+    newSocket.on("disconnect", handleDisconnect);
+  
+    return () => {
+      newSocket.off("connect", handleConnect);
+      newSocket.off("disconnect", handleDisconnect);
+      newSocket.disconnect();
+    };
   }, []);
+
+
+  const debouncedHandleStart = useCallback(
+    debounce(() => {
+      if (socket && socket.connected && classid) {
+        const userID = currentUser.uid;
+        socket.emit("start_stream", { classid, userID });
+        setIsStreaming(true);
+      }
+    }, 300),
+    [socket, classid, currentUser]
+  );
+  
+  const debouncedHandleStop = useCallback(
+    debounce(() => {
+      if (socket) {
+        socket.emit("stop_stream");
+        setIsStreaming(false);
+        if (videoRef.current) {
+          videoRef.current.src = null;
+        }
+        setImageSrc(null);
+      }
+    }, 300),
+    [socket]
+  );
+
+  
+  useEffect(() => {
+    if (currentUser && socket && socket.connected && classid) {
+      const userID = currentUser.uid;
+      
+      // Check cache first
+      if (studentCache[classid]) {
+        // Use cached data
+        return;
+      }
+  
+      // Fetch and cache student data
+      socket.emit("load_student_data", userID, classid);
+      socket.on("student_data_loaded", (data) => {
+        setStudentCache(prev => ({
+          ...prev,
+          [classid]: data
+        }));
+      });
+    }
+  }, [socket, classid, currentUser]);
 
   useEffect(() => {
     if (socket && isStreaming) {
@@ -74,45 +156,21 @@ const Attendancepage = () => {
 
   useEffect(() => {
     if (socket && isStreaming) {
-      console.log("Setting up students_data Listener");
-
-      const handleStudentData = (data) => {
-        console.log("Received data:", data);
-
-        if (data && data.data) {
-          try {
-            const json_form = JSON.parse(data.data);
-            console.log("Parsed JSON:", json_form);
-
-            if (json_form) {
-              setPresentStudents((prevData) => {
-                const isPresent = prevData.some(
-                  (student) => student.id === json_form.id
-                );
-
-                if (isPresent) {
-                  return prevData;
-                }
-
-                return [...prevData, json_form];
-              });
-            }
-          } catch (error) {
-            console.error("Error parsing JSON data:", error);
-          }
-        } else {
-          console.error("Received data is not valid or empty:", data);
-          console.log("Requesting backend to emit data again...");
-          socket.emit("request_students_data", { classid });
-        }
+      const videoDataHandler = (data) => {
+        // Existing video data processing logic
       };
-
-      socket.on("students_data", handleStudentData);
+  
+      const studentsDataHandler = handleStudentData;
+  
+      socket.on("video_data", videoDataHandler);
+      socket.on("students_data", studentsDataHandler);
+  
       return () => {
-        socket.off("students_data", handleStudentData);
+        socket.off("video_data", videoDataHandler);
+        socket.off("students_data", studentsDataHandler);
       };
     }
-  }, [socket, isStreaming, classid]);
+  }, [socket, isStreaming, handleStudentData]);
 
   useEffect(() => {
     if (currentUser && socket && socket.connected && classid) {
@@ -133,6 +191,22 @@ const Attendancepage = () => {
       console.log("Socket not connected, cant start stream");
     }
   };
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("connect_error", (error) => {
+        console.error("Connection Error:", error);
+        toast.error('Connection error: ', error)
+      });
+  
+      socket.on("reconnect", (attemptNumber) => {
+        console.log(`Reconnected on attempt: ${attemptNumber}`);
+        // Reinitialize necessary data
+        socket.emit("load_student_data", currentUser.uid, classid);
+        socket.emit("load_images");
+      });
+    }
+  }, [socket, currentUser, classid]);
 
   const handleStop = () => {
     if (socket) {
