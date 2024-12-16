@@ -3,14 +3,10 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../context/authContenxt";
 import logo from "../../images/logo.png";
 import "./Navbar.css";
+import UserIcon from "../usericon/UserIcon";
 
 export const Navbar = () => {
-  const { currentUser, Logout } = useAuth();
-
-  const handleLogout = async () => {
-    await Logout();
-  };
-
+  const { currentUser } = useAuth();
   return (
     <div className="flex flex-row items-center justify-between h-[80px] w-full px-20 py-5 bg-[#1F1E1E] fixed">
       <div className="logo-wrapper w-1/2">
@@ -22,7 +18,7 @@ export const Navbar = () => {
         <a href="#contact">CONTACT US</a>
         {currentUser ? (
           <>
-            <button onClick={handleLogout}>LOGOUT</button>
+            <UserIcon />
           </>
         ) : (
           <>

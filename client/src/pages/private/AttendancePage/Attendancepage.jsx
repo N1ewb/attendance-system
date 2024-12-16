@@ -24,11 +24,10 @@ const Attendancepage = () => {
     if (data && data.data) {
       try {
         const newStudent = JSON.parse(data.data);
-        
+
         setPresentStudents((prevStudents) => {
-          // Use Set to ensure unique students
-          const studentSet = new Set(prevStudents.map(s => s.id));
-          
+          const studentSet = new Set(prevStudents.map((s) => s.id));
+
           if (!studentSet.has(newStudent.id)) {
             return [...prevStudents, newStudent];
           }
@@ -41,38 +40,38 @@ const Attendancepage = () => {
   }, []);
 
   useEffect(() => {
-    const socketURL = window.location.hostname === "localhost" 
-      ? "http://127.0.0.1:5000" 
-      : window.location.origin;
-  
+    const socketURL =
+      window.location.hostname === "localhost"
+        ? "http://127.0.0.1:5000"
+        : window.location.origin;
+
     const newSocket = io(socketURL, {
       transports: ["websocket"],
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
     });
-  
+
     const handleConnect = () => {
       console.log("Connected to server");
       setSocket(newSocket);
     };
-  
+
     const handleDisconnect = () => {
       console.log("Disconnected from server");
       setSocket(null);
     };
-  
+
     newSocket.on("connect", handleConnect);
     newSocket.on("disconnect", handleDisconnect);
-  
+
     return () => {
       newSocket.off("connect", handleConnect);
       newSocket.off("disconnect", handleDisconnect);
       newSocket.disconnect();
     };
   }, []);
-
 
   const debouncedHandleStart = useCallback(
     debounce(() => {
@@ -84,7 +83,7 @@ const Attendancepage = () => {
     }, 300),
     [socket, classid, currentUser]
   );
-  
+
   const debouncedHandleStop = useCallback(
     debounce(() => {
       if (socket) {
@@ -99,23 +98,19 @@ const Attendancepage = () => {
     [socket]
   );
 
-  
   useEffect(() => {
     if (currentUser && socket && socket.connected && classid) {
       const userID = currentUser.uid;
-      
-      // Check cache first
+
       if (studentCache[classid]) {
-        // Use cached data
         return;
       }
-  
-      // Fetch and cache student data
+
       socket.emit("load_student_data", userID, classid);
       socket.on("student_data_loaded", (data) => {
-        setStudentCache(prev => ({
+        setStudentCache((prev) => ({
           ...prev,
-          [classid]: data
+          [classid]: data,
         }));
       });
     }
@@ -126,7 +121,6 @@ const Attendancepage = () => {
       console.log("Setting up video_data Listener");
 
       socket.on("video_data", (data) => {
-        // Ensure data.data is a base64 string
         if (data && data.data) {
           const byteCharacters = atob(data.data);
           const byteNumbers = new Uint8Array(byteCharacters.length);
@@ -140,7 +134,7 @@ const Attendancepage = () => {
           if (videoRef.current) {
             videoRef.current.src = URL.createObjectURL(blob);
             videoRef.current.onload = () => {
-              URL.revokeObjectURL(videoRef.current.src); // Cleanup old object URL
+              URL.revokeObjectURL(videoRef.current.src);
             };
           }
         } else {
@@ -156,15 +150,13 @@ const Attendancepage = () => {
 
   useEffect(() => {
     if (socket && isStreaming) {
-      const videoDataHandler = (data) => {
-        // Existing video data processing logic
-      };
-  
+      const videoDataHandler = (data) => {};
+
       const studentsDataHandler = handleStudentData;
-  
+
       socket.on("video_data", videoDataHandler);
       socket.on("students_data", studentsDataHandler);
-  
+
       return () => {
         socket.off("video_data", videoDataHandler);
         socket.off("students_data", studentsDataHandler);
@@ -196,12 +188,12 @@ const Attendancepage = () => {
     if (socket) {
       socket.on("connect_error", (error) => {
         console.error("Connection Error:", error);
-        toast.error('Connection error: ', error)
+        toast.error("Connection error: ", error);
       });
-  
+
       socket.on("reconnect", (attemptNumber) => {
         console.log(`Reconnected on attempt: ${attemptNumber}`);
-        // Reinitialize necessary data
+
         socket.emit("load_student_data", currentUser.uid, classid);
         socket.emit("load_images");
       });
@@ -239,11 +231,18 @@ const Attendancepage = () => {
       handleStop();
     }
   };
-  const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
+  const options = {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: true,
+  };
   const formattedDate = (date) => {
-    return date.toLocaleString('en-US', options);
-  } 
-    
+    return date.toLocaleString("en-US", options);
+  };
 
   return (
     <div className="pt-32 h-screen w-full flex flex-col gap-5 px-10 items-center">
@@ -284,10 +283,17 @@ const Attendancepage = () => {
                     <p>
                       Status: <span className="text-green-700">Present</span>
                     </p>
-                    <p>Timestamp <span>{formattedDate(student.last_attendance_time)}</span></p>
-                   <div className="wrapper h-[80px] w-[80px]">
-                   <img src={student.studentImage} alt="Student Photo" className="object-center object-fill h-full w-full" />
-                   </div>
+                    <p>
+                      Timestamp{" "}
+                      <span>{formattedDate(student.last_attendance_time)}</span>
+                    </p>
+                    <div className="wrapper h-[80px] w-[80px]">
+                      <img
+                        src={student.studentImage}
+                        alt="Student Photo"
+                        className="object-center object-fill h-full w-full"
+                      />
+                    </div>
                   </div>
                 ))
               : "No Students attended yet"}

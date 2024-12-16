@@ -14,6 +14,7 @@ import Signup from "./pages/Auth/Signup";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import { DBProvider } from "./context/DBContext";
+import { StudentProvider } from "./context/StudentContext";
 
 function App() {
   const router = createBrowserRouter([
@@ -68,7 +69,9 @@ function App() {
   return (
     <AuthProvider>
       <DBProvider>
-        <RouterProvider router={router} />
+        <StudentProvider>
+          <RouterProvider router={router} />
+        </StudentProvider>
       </DBProvider>
     </AuthProvider>
   );

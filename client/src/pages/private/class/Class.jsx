@@ -4,9 +4,12 @@ import { classes } from "../../../lib/global";
 import Students from "../../../components/Students/Students";
 import Attendance from "../../../components/Attendance/Attendance";
 import { useDB } from "../../../context/DBContext";
+import StudentsModal from "../../../components/Students/StudentsModal";
+import { useStudent } from "../../../context/StudentContext";
 
 function Class() {
   const db = useDB();
+  const {currentStudent} = useStudent()
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const classid = queryParams.get("id");
@@ -37,6 +40,7 @@ function Class() {
           </main>
         </>
       )}
+      {currentStudent && <StudentsModal />}
     </div>
   );
 }

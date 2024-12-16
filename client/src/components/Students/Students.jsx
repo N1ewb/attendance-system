@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { students } from "../../lib/global";
+
 import { useDB } from "../../context/DBContext";
 import AddStudentModal from "../modal/AddStudentModal";
+import { useStudent } from "../../context/StudentContext";
+
 const Students = ({ id }) => {
   const db = useDB();
+  const {handleToggleModal} = useStudent()
   const [show, setShow] = useState(false);
   const handleShow = () => setShow(true);
   const [students, setStudents] = useState([]);
@@ -24,14 +27,15 @@ const Students = ({ id }) => {
     <div className="w-full h-full">
       <header className="flex flex-row justify-between py-10 px-3">
         <h1 className="font-semibold text-[20px]">Students</h1>
-        <button onClick={handleShow}>Add Student</button>
+        <button className="bg-green-700 hover:bg-green-800 rounded-md px-5 py-3 text-white font-semibold"  onClick={handleShow}>Add Student</button>
       </header>
       <div className="students-container w-full flex flex-col gap-5 items-start h-[80%] max-h-[80%] overflow-auto pb-5">
         {students.length !== 0 &&
           students.map((student, index) => (
             <div
               key={index}
-              className="w-full flex flex-row gap-5 shadow-md p-5 rounded-lg"
+              className="w-full flex flex-row gap-5 shadow-md p-5 rounded-lg cursor-pointer"
+              onClick={() => handleToggleModal(student)}
             >
               <p>
                 <span className="text-[14px] font-light text-[#9f9f9f]">
@@ -58,6 +62,7 @@ const Students = ({ id }) => {
           ))}
       </div>
       <AddStudentModal id={id} show={show} setShow={setShow} />
+      
     </div>
   );
 };
