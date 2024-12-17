@@ -102,22 +102,29 @@ def setup_streaming(socketio: SocketIO):
                     for encodeFace, faceLocation in zip(encodeCurrentFrame, faceCurrentFrame):
                         matches = face_recognition.compare_faces(encodeListKnown, encodeFace)
                         faceDistance = face_recognition.face_distance(encodeListKnown, encodeFace)
+                        
+                        print("Matches Array (True/False):", matches)
+                        print("Face Distances Array:", faceDistance)
+
+                        # Get the index of the minimum distance
                         matchIndex = np.argmin(faceDistance)
 
-                        if matches[matchIndex]:
+                        # Check if the minimum face distance is below the threshold and the match is valid
+                        if faceDistance[matchIndex] < 0.8 and matches[matchIndex]:
                             id = studentIds[matchIndex]
-                            studentInfo = students_dict.get(id) 
+                            studentInfo = students_dict.get(id)
                             print("Matching ID Detected")
-                            print(f"ID: {id}, Student Info: {studentInfo}") 
-                            
-                            if studentInfo not in present_students and studentInfo is not None: 
+                            print(f"ID: {id}, Student Info: {studentInfo}")
+
+                            if studentInfo not in present_students and studentInfo is not None:
                                 present_students_serialized = serialize_student_info(studentInfo)
                                 socketio.emit('students_data', {"data": json.dumps(present_students_serialized)})
                                 print(f"New student marked present: {studentInfo.get('firstName', 'Unknown')} {studentInfo.get('lastName', 'Unknown')}")
-                            
+
                             counter += 1
                             if counter >= 20:
                                 counter = 0
+
                                 
 
                 # Send frames as base64

@@ -1,13 +1,13 @@
 import React from "react";
-import { useStudent } from "../../context/StudentContext";
+import { useModal } from "../../context/ModalContext";
 
 export default function StudentsModal() {
-  const { currentStudent, handleToggleModal } = useStudent();
+  const { currentStudent, handleToggleStudentModal } = useModal();
 
   return (
     <div
       className="w-full h-full flex justify-center items-center p-10 bg-[#0000006a] absolute top-0 left-0 z-50"
-      onClick={() => handleToggleModal(currentStudent)}
+      onClick={() => handleToggleStudentModal(currentStudent)}
     >
       <div
         className="flex-1 max-w-lg flex flex-col shadow-xl rounded-xl bg-white p-8 gap-8 mx-auto"
@@ -57,7 +57,7 @@ export default function StudentsModal() {
         <div className="flex justify-end mt-4">
           <button
             className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg focus:outline-none"
-            onClick={() => handleToggleModal(currentStudent)}
+            onClick={() => handleToggleStudentModal(currentStudent)}
           >
             Close
           </button>

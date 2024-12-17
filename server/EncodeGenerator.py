@@ -17,7 +17,7 @@ for path in pathList:
     imgList.append(cv2.imread(os.path.join(folderPath, path)))
     studentIds.append(path.split('.')[0])
 
-    upload_file_to_storage(image_path, path)
+    # upload_file_to_storage(image_path, path)
     
 
 def findEncodings(imagesList):

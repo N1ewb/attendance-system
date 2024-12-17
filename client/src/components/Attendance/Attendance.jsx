@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/authContenxt";
 import { useDB } from "../../context/DBContext";
+import { useModal } from "../../context/ModalContext";
 
 function Attendance({ id }) {
   const db = useDB();
   const { currentUser } = useAuth();
+  const {handleToggleAttendanceModal} = useModal()
   const [attendance, setAttendance] = useState([]);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ function Attendance({ id }) {
       <div className="attendance-container flex flex-col gap-5 pt-5">
         {attendance.length !== 0 ?
           attendance.map((att, index) => (
-            <div key={index} className=" shadow-md p-5  rounded-lg flex flex-row justify-between items-center capitalize">
+            <div onClick={() => handleToggleAttendanceModal(att)} key={index} className=" shadow-md p-5 cursor-pointer rounded-lg flex flex-row justify-between items-center capitalize">
               <p>{att.session}</p>
               <p>{att.dateToday}</p>
             </div>

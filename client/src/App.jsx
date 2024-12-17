@@ -14,7 +14,8 @@ import Signup from "./pages/Auth/Signup";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import { DBProvider } from "./context/DBContext";
-import { StudentProvider } from "./context/StudentContext";
+
+import { ModalProvider } from "./context/ModalContext";
 
 function App() {
   const router = createBrowserRouter([
@@ -69,9 +70,9 @@ function App() {
   return (
     <AuthProvider>
       <DBProvider>
-        <StudentProvider>
+        <ModalProvider>
           <RouterProvider router={router} />
-        </StudentProvider>
+        </ModalProvider>
       </DBProvider>
     </AuthProvider>
   );

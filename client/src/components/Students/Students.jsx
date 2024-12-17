@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 
 import { useDB } from "../../context/DBContext";
 import AddStudentModal from "../modal/AddStudentModal";
-import { useStudent } from "../../context/StudentContext";
+import { useModal } from "../../context/ModalContext";
 
 const Students = ({ id }) => {
   const db = useDB();
-  const {handleToggleModal} = useStudent()
+  const {handleToggleStudentModal} = useModal()
   const [show, setShow] = useState(false);
   const handleShow = () => setShow(true);
   const [students, setStudents] = useState([]);
@@ -35,7 +35,7 @@ const Students = ({ id }) => {
             <div
               key={index}
               className="w-full flex flex-row gap-5 shadow-md p-5 rounded-lg cursor-pointer"
-              onClick={() => handleToggleModal(student)}
+              onClick={() => handleToggleStudentModal(student)}
             >
               <p>
                 <span className="text-[14px] font-light text-[#9f9f9f]">
