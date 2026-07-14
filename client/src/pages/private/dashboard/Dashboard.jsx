@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { useAuth } from "../../../context/authContext";
+import { useEffect, useState } from "react";
 import ClassesCard from "../../../components/Classes/ClassesCard";
 import Modal from "../../../components/modal/AddClassModal";
 import { useDB } from "../../../context/DBContext";
