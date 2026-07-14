@@ -5,7 +5,7 @@ import { AuthLayout } from "./layouts/AuthLayout";
 import Login from "./pages/Auth/Login";
 import PrivateLayout from "./layouts/PrivateLayout";
 import Dashboard from "./pages/private/dashboard/Dashboard";
-import { AuthProvider } from "./context/authContenxt";
+import { AuthProvider } from "./context/authContext";
 import Class from "./pages/private/class/Class";
 import { ClassDetail } from "./pages/private/classDetail/ClassDetail";
 import Attendancepage from "./pages/private/AttendancePage/Attendancepage";

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../../context/authContenxt";
+import { useAuth } from "../../context/authContext";
 import { useDB } from "../../context/DBContext";
 import { useModal } from "../../context/ModalContext";
 

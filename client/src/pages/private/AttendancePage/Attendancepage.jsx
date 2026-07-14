@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
-import { useAuth } from "../../../context/authContenxt";
+import { useAuth } from "../../../context/authContext";
 import { useDB } from "../../../context/DBContext";
 import toast from "react-hot-toast";
 import debounce from "lodash/debounce";

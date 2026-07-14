@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../../context/authContenxt";
+import { useAuth } from "../../context/authContext";
 import logo from "../../images/logo.png";
 import "./Navbar.css";
 import UserIcon from "../usericon/UserIcon";

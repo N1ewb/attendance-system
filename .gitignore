@@ -3,3 +3,6 @@ service-account-key.json
 firebase
 node_modules/
 __pycache__/
+docs
+.env
+.env.example

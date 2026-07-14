@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../../../context/authContenxt";
+import { useAuth } from "../../../context/authContext";
 import ClassesCard from "../../../components/Classes/ClassesCard";
 import Modal from "../../../components/modal/AddClassModal";
 import { useDB } from "../../../context/DBContext";

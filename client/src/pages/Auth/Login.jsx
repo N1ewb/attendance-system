@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from "react";
-import { useAuth } from "../../context/authContenxt";
+import React, { useEffect, useRef, useState } from "react";
+import { useAuth } from "../../context/authContext";
 import { useNavigate, Link } from "react-router-dom";
 import Cirlce1 from "../../images/Circle1.png";
 import Cirlce2 from "../../images/Circle2.png";
@@ -9,25 +9,24 @@ import "./Login.css";
 function Login() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
   const emailRef = useRef();
   const passwordRef = useRef();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (!emailRef.current?.value || !passwordRef.current?.value) return;
 
-    const email = emailRef.current.value;
-    const password = passwordRef.current.value;
-
-    if ((email, password)) {
-      await auth.Login(email, password);
-    }
+    setSubmitting(true);
+    await auth.Login(emailRef.current.value, passwordRef.current.value);
+    setSubmitting(false);
   };
 
   useEffect(() => {
-    if (auth.currentUser) {
+    if (auth.currentUser && !auth.loading) {
       navigate("/private/dashboard");
     }
-  }, [auth.currentUser]);
+  }, [auth.currentUser, auth.loading, navigate]);
 
   return (
     <>
@@ -47,7 +46,7 @@ function Login() {
             <div className="dots">
               <p></p>
             </div>
-            <form action="" onSubmit={handleLogin}>
+            <form onSubmit={handleLogin}>
               <h1 className="login">Log In</h1>
               <div className="inputs">
                 <input
@@ -56,7 +55,6 @@ function Login() {
                   name="email"
                   placeholder="Enter your email"
                   ref={emailRef}
-                  required
                 />
                 <input
                   id="password"
@@ -64,16 +62,14 @@ function Login() {
                   name="password"
                   placeholder="Enter your password"
                   ref={passwordRef}
-                  required
                 />
               </div>
-              <button type="submit" className="bttn">
-                Log In
+              <button type="submit" className="bttn" disabled={submitting}>
+                {submitting ? "Logging in..." : "Log In"}
               </button>
               <p>
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <span>
-                  {" "}
                   <Link to="/auth/Signup">Sign up</Link>
                 </span>
               </p>

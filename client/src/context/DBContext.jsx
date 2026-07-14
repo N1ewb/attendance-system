@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { createContext, useContext } from "react";
 import { firestore, storage } from "../firebase";
-import { useAuth } from "./authContenxt";
+import { useAuth } from "./authContext";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const dbContext = createContext();
