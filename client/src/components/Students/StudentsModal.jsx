@@ -1,8 +1,18 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import { useModal } from "../../context/ModalContext";
+import { getStudentImageUrl } from "../../lib/api";
 
 export default function StudentsModal() {
   const { currentStudent, handleToggleStudentModal } = useModal();
+  const [imageUrl, setImageUrl] = useState(null);
+
+  useEffect(() => {
+    if (currentStudent?.imageUrl) {
+      getStudentImageUrl(currentStudent.imageUrl).then(({ url }) => {
+        if (url) setImageUrl(url);
+      });
+    }
+  }, [currentStudent]);
 
   return (
     <div
@@ -14,46 +24,56 @@ export default function StudentsModal() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-center mb-6">
-          <img
-            src={currentStudent.studentImage}
-            alt="student-id"
-            className="max-h-[250px] max-w-[250px] object-cover rounded-full border-4 border-green-500 shadow-lg"
-          />
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt="student"
+              className="max-h-[250px] max-w-[250px] object-cover rounded-full border-4 border-green-500 shadow-lg"
+            />
+          ) : (
+            <div className="max-h-[250px] max-w-[250px] flex items-center justify-center rounded-full border-4 border-gray-300 bg-gray-100 shadow-lg">
+              <span className="text-6xl text-gray-400">
+                {currentStudent?.firstName?.charAt(0) || "?"}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="student-deets flex flex-col gap-5">
           <p className="text-lg font-semibold text-gray-800">
-            Full Name:
+            Full Name:{" "}
             <span className="font-normal text-green-600">
-              {currentStudent.firstName} {currentStudent.lastName}
+              {currentStudent?.firstName} {currentStudent?.lastName}
             </span>
           </p>
           <p className="text-lg font-semibold text-gray-800">
-            Student ID Number:
+            Student ID Number:{" "}
             <span className="font-normal text-gray-600">
-              {currentStudent.studentID}
+              {currentStudent?.studentId}
             </span>
           </p>
           <p className="text-lg font-semibold text-gray-800">
-            Email:
+            Email:{" "}
             <span className="font-normal text-gray-600">
-              {currentStudent.email}
+              {currentStudent?.email}
             </span>
           </p>
           <p className="text-lg font-semibold text-gray-800">
-            Course:
+            Total Attendance:{" "}
             <span className="font-normal text-green-600">
-              {currentStudent.course}
+              {currentStudent?.totalAttendance || 0}
             </span>
           </p>
           <p className="text-lg font-semibold text-gray-800">
-            Department:
+            Last Attendance:{" "}
             <span className="font-normal text-gray-600">
-              {currentStudent.department}
+              {currentStudent?.lastAttendanceTime
+                ? new Date(currentStudent.lastAttendanceTime).toLocaleDateString()
+                : "N/A"}
             </span>
           </p>
         </div>
-        
+
         <div className="flex justify-end mt-4">
           <button
             className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg focus:outline-none"

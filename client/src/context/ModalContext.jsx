@@ -1,22 +1,20 @@
 import { createContext, useContext, useState } from "react";
 
-const ModalContext = createContext();  
+const ModalContext = createContext();
 
 export function useModal() {
-  return useContext(ModalContext);  
+  return useContext(ModalContext);
 }
 
 export const ModalProvider = ({ children }) => {
   const [currentStudent, setCurrentStudent] = useState(null);
   const [currentAttendance, setCurrentAttendance] = useState(null);
 
-  const handleToggleStudentModal = (currentStudent) => {
-    console.log('Clicked ', currentStudent);
-    setCurrentStudent(prevStudent => prevStudent === currentStudent ? null : currentStudent);
+  const handleToggleStudentModal = (student) => {
+    setCurrentStudent((prev) => (prev === student ? null : student));
   };
-  const handleToggleAttendanceModal = (currentAttendance) => {
-    console.log('Clicked ', currentAttendance);
-    setCurrentAttendance(prevAttendance => prevAttendance === currentAttendance ? null : currentAttendance);
+  const handleToggleAttendanceModal = (attendance) => {
+    setCurrentAttendance((prev) => (prev === attendance ? null : attendance));
   };
 
   const value = {
@@ -27,7 +25,7 @@ export const ModalProvider = ({ children }) => {
   };
 
   return (
-    <ModalContext.Provider value={value}>  
+    <ModalContext.Provider value={value}>
       {children}
     </ModalContext.Provider>
   );

@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 
 function ClassesCard({ classes }) {
@@ -13,12 +12,12 @@ function ClassesCard({ classes }) {
             className="w-full sm:w-[48%] lg:w-[30%] flex flex-col items-start gap-5 shadow-md cursor-pointer rounded-xl bg-white p-6 border border-gray-200 hover:shadow-2xl transition-shadow"
           >
             <p className="text-lg font-semibold text-gray-700">
-              {myclass.SubjectCode}
+              {myclass.subjectCode}
             </p>
             <p className="text-sm text-gray-600">
-              Subject Code: <span>{myclass.OfferNumber}</span>
+              Subject Code: <span>{myclass.offerNumber}</span>
             </p>
-            <p className="text-sm text-gray-600">{myclass.Description}</p>
+            <p className="text-sm text-gray-600">{myclass.description}</p>
           </div>
         ))
       ) : (

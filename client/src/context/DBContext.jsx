@@ -1,4 +1,8 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useCallback } from "react";
+import { supabase } from "../lib/supabase";
+import toast from "react-hot-toast";
+import { toCamelCase, toCamelCaseArray, toSnakeCase } from "../lib/mapper";
+import { getClasses, getStudents, getAttendanceSessions } from "../lib/api";
 
 const dbContext = createContext();
 
@@ -7,13 +11,207 @@ export function useDB() {
 }
 
 export function DBProvider({ children }) {
-  const MakeClass = async () => ({ message: "Supabase migration pending (Phase 3)" });
-  const getClassInfo = async () => null;
-  const AddStudent = async () => ({ message: "Supabase migration pending (Phase 3)", status: "pending" });
-  const RecordAttendance = async () => {};
-  const subscribetoAttendanceChanges = async () => () => {};
-  const subscribetoStudentChanges = async () => () => {};
-  const subscribetoClassesChanges = async () => () => {};
+
+  async function MakeClass(subjectCode, offerNumber, description, units) {
+    try {
+      const { data, error } = await supabase
+        .from("classes")
+        .insert(
+          toSnakeCase({ subjectCode, offerNumber, description, units: Number(units) })
+        )
+        .select()
+        .single();
+      if (error) {
+        toast.error("Failed to create class: " + error.message);
+        return null;
+      }
+      toast.success("Class created successfully.");
+      return toCamelCase(data);
+    } catch (err) {
+      toast.error("Failed to create class: " + err.message);
+      return null;
+    }
+  }
+
+  async function getClassInfo(id) {
+    try {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error) {
+        toast.error("Failed to load class: " + error.message);
+        return null;
+      }
+      return toCamelCase(data);
+    } catch (err) {
+      toast.error("Failed to load class: " + err.message);
+      return null;
+    }
+  }
+
+  async function AddStudent(classId, firstName, lastName, email, studentIdInput, imageFile) {
+    try {
+      let imageUrl = null;
+      if (imageFile) {
+        const ext = imageFile.name.split(".").pop();
+        const filePath = `${classId}/${studentIdInput}_${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("student-images")
+          .upload(filePath, imageFile);
+        if (uploadError) {
+          return { status: "error", message: "Image upload failed: " + uploadError.message };
+        }
+        imageUrl = filePath;
+      }
+
+      const { data, error } = await supabase
+        .from("students")
+        .insert(
+          toSnakeCase({
+            classId,
+            firstName,
+            lastName,
+            email,
+            studentId: studentIdInput,
+            imageUrl,
+          })
+        )
+        .select()
+        .single();
+      if (error) {
+        return { status: "error", message: error.message };
+      }
+      toast.success("Student added successfully.");
+      return { status: "success", message: "Student added successfully.", data: toCamelCase(data) };
+    } catch (err) {
+      return { status: "error", message: err.message };
+    }
+  }
+
+  async function RecordAttendance(sessionId, studentId) {
+    try {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .insert(toSnakeCase({ sessionId, studentId }))
+        .select()
+        .single();
+      if (error) return { error: error.message };
+      await supabase.rpc("increment_attendance", { student_id: studentId });
+      return { data: toCamelCase(data), error: null };
+    } catch (err) {
+      return { error: err.message };
+    }
+  }
+
+  const subscribetoClassesChanges = useCallback(
+    (onChange) => {
+      const handler = (payload) => {
+        if (payload.eventType === "INSERT") {
+          onChange({ type: "INSERT", data: toCamelCase(payload.new) });
+        } else if (payload.eventType === "UPDATE") {
+          onChange({ type: "UPDATE", data: toCamelCase(payload.new) });
+        } else if (payload.eventType === "DELETE") {
+          onChange({ type: "DELETE", data: { id: payload.old.id } });
+        }
+      };
+
+      const sub = supabase
+        .channel("classes-changes")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "classes" },
+          handler
+        )
+        .subscribe();
+
+      getClasses().then(({ data }) => {
+        if (data) {
+          onChange({ type: "INITIAL", data: toCamelCaseArray(data) });
+        }
+      });
+
+      return () => {
+        sub.unsubscribe();
+      };
+    },
+    []
+  );
+
+  const subscribetoStudentChanges = useCallback(
+    (classId, onChange) => {
+      const handler = (payload) => {
+        if (payload.eventType === "INSERT") {
+          onChange({ type: "INSERT", data: toCamelCase(payload.new) });
+        } else if (payload.eventType === "UPDATE") {
+          onChange({ type: "UPDATE", data: toCamelCase(payload.new) });
+        } else if (payload.eventType === "DELETE") {
+          onChange({ type: "DELETE", data: { id: payload.old.id } });
+        }
+      };
+
+      const sub = supabase
+        .channel(`students-changes-${classId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "students",
+            filter: `class_id=eq.${classId}`,
+          },
+          handler
+        )
+        .subscribe();
+
+      getStudents(classId).then(({ data }) => {
+        if (data) {
+          onChange({ type: "INITIAL", data: toCamelCaseArray(data) });
+        }
+      });
+
+      return () => {
+        sub.unsubscribe();
+      };
+    },
+    []
+  );
+
+  const subscribetoAttendanceChanges = useCallback(
+    (classId, onChange) => {
+      const handler = (payload) => {
+        if (payload.eventType === "INSERT") {
+          onChange({ type: "INSERT", data: toCamelCase(payload.new) });
+        }
+      };
+
+      const sub = supabase
+        .channel(`attendance-changes-${classId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "attendance_sessions",
+            filter: `class_id=eq.${classId}`,
+          },
+          handler
+        )
+        .subscribe();
+
+      getAttendanceSessions(classId).then(({ data }) => {
+        if (data) {
+          onChange({ type: "INITIAL", data: toCamelCaseArray(data) });
+        }
+      });
+
+      return () => {
+        sub.unsubscribe();
+      };
+    },
+    []
+  );
 
   const value = {
     MakeClass,

@@ -1,11 +1,13 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import { useDB } from "../../context/DBContext";
-import {toast} from 'react-hot-toast'
+import { toast } from "react-hot-toast";
 
 function AddStudentModal({ id, show, setShow }) {
   const db = useDB();
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
   const handleClose = () => setShow(false);
 
   const firstNameRef = useRef();
@@ -14,33 +16,44 @@ function AddStudentModal({ id, show, setShow }) {
   const studentIdRef = useRef();
   const imageRef = useRef();
 
+  const validate = () => {
+    const errs = {};
+    if (!firstNameRef.current?.value) errs.firstName = "First name is required";
+    if (!lastNameRef.current?.value) errs.lastName = "Last name is required";
+    if (!emailRef.current?.value) errs.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(emailRef.current.value)) errs.email = "Invalid email format";
+    if (!studentIdRef.current?.value) errs.studentId = "Student ID is required";
+    if (!imageRef.current?.files?.[0]) errs.image = "Student image is required";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const firstName = firstNameRef.current.value;
-    const lastName = lastNameRef.current.value;
-    const email = emailRef.current.value;
-    const studentId = studentIdRef.current.value;
-    const imageFile = imageRef.current.files[0];
-
-    if (!firstName || !lastName || !email || !studentId || !imageFile || !id) {
-      toast.error("All fields are required!");
+    if (!validate()) return;
+    if (!id) {
+      toast.error("No class selected.");
       return;
     }
 
-    try {
-      const res = await db.AddStudent(id, firstName, lastName, email, studentId, imageFile);
-      if(res.status === 'success'){
-        toast.success(res.message)
-      }else {
-        toast.error(res.message)
-      }
+    setSubmitting(true);
+    const res = await db.AddStudent(
+      id,
+      firstNameRef.current.value,
+      lastNameRef.current.value,
+      emailRef.current.value,
+      studentIdRef.current.value,
+      imageRef.current.files[0]
+    );
+    setSubmitting(false);
+
+    if (res.status === "success") {
+      toast.success(res.message);
       e.target.reset();
-    } catch (error) {
-      toast.error("Error in adding new student");
-      console.error("Error:", error);
-    } finally {
+      setErrors({});
       handleClose();
+    } else {
+      toast.error(res.message);
     }
   };
 
@@ -56,26 +69,31 @@ function AddStudentModal({ id, show, setShow }) {
         >
           <div className="input-group flex flex-col gap-2">
             <label htmlFor="first-name">First Name</label>
-            <input type="text" id="first-name" ref={firstNameRef} required />
+            <input type="text" id="first-name" ref={firstNameRef} />
+            {errors.firstName && <span className="text-red-500 text-sm">{errors.firstName}</span>}
           </div>
           <div className="input-group flex flex-col gap-2">
             <label htmlFor="last-name">Last Name</label>
-            <input type="text" id="last-name" ref={lastNameRef} required />
+            <input type="text" id="last-name" ref={lastNameRef} />
+            {errors.lastName && <span className="text-red-500 text-sm">{errors.lastName}</span>}
           </div>
           <div className="input-group flex flex-col gap-2">
             <label htmlFor="email">Email</label>
-            <input type="email" id="email" ref={emailRef} required />
+            <input type="email" id="email" ref={emailRef} />
+            {errors.email && <span className="text-red-500 text-sm">{errors.email}</span>}
           </div>
           <div className="input-group flex flex-col gap-2">
             <label htmlFor="student-id">Student ID Number</label>
-            <input type="text" id="student-id" ref={studentIdRef} required />
+            <input type="text" id="student-id" ref={studentIdRef} />
+            {errors.studentId && <span className="text-red-500 text-sm">{errors.studentId}</span>}
           </div>
           <div className="input-group flex flex-col gap-2">
             <label htmlFor="student-image">Student 2x2 Image</label>
-            <input type="file" id="student-image" ref={imageRef} required />
+            <input type="file" id="student-image" ref={imageRef} accept="image/*" />
+            {errors.image && <span className="text-red-500 text-sm">{errors.image}</span>}
           </div>
-          <Button variant="primary" type="submit">
-            Submit
+          <Button variant="primary" type="submit" disabled={submitting}>
+            {submitting ? "Adding..." : "Submit"}
           </Button>
         </form>
       </Modal.Body>

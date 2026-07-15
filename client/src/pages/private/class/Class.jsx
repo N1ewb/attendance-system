@@ -31,7 +31,7 @@ function Class() {
       {thisClass && classid && (
         <>
           <header>
-            <h1 className="font-bold text-[28px]">{thisClass.SubjectCode}</h1>
+            <h1 className="font-bold text-[28px]">{thisClass.subjectCode}</h1>
           </header>
           <main className="flex flex-row w-full h-full justify-between">
             <Attendance id={classid} />
