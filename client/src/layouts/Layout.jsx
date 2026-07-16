@@ -1,9 +1,12 @@
-import { Outlet, Navigate } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { Navbar } from "../components/Navbar/Navbar";
 import { useAuth } from "../context/authContext";
 
+const PUBLIC_PATHS = ["/", "/auth"];
+
 export const Layout = () => {
   const { currentUser, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -13,7 +16,11 @@ export const Layout = () => {
     );
   }
 
-  if (currentUser) {
+  const isPublicRoute = PUBLIC_PATHS.some(
+    (p) => location.pathname === p || location.pathname.startsWith(p + "/")
+  );
+
+  if (currentUser && isPublicRoute) {
     return <Navigate to="/private/dashboard" replace />;
   }
 

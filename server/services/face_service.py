@@ -2,11 +2,41 @@ import logging
 import io
 from typing import List, Optional, Any
 
-import face_recognition
+import cv2
 import numpy as np
 from PIL import Image
 
+from server.services.model_loader import get_yunet_path, get_sface_path
+
 logger = logging.getLogger(__name__)
+
+_face_detector = None
+_face_recognizer = None
+
+
+def _get_detector():
+    global _face_detector
+    if _face_detector is None:
+        path = get_yunet_path()
+        _face_detector = cv2.FaceDetectorYN.create(path, "", (320, 240))
+    return _face_detector
+
+
+def _get_recognizer():
+    global _face_recognizer
+    if _face_recognizer is None:
+        path = get_sface_path()
+        _face_recognizer = cv2.FaceRecognizerSF.create(path, "")
+    return _face_recognizer
+
+
+def _decode_image(image_bytes: bytes) -> Optional[np.ndarray]:
+    try:
+        pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        return np.array(pil_image)[:, :, ::-1]
+    except Exception as exc:
+        logger.error("Failed to decode image: %s", exc)
+        return None
 
 
 def load_face_encodings(class_id: str) -> List[dict]:
@@ -26,7 +56,7 @@ def load_face_encodings(class_id: str) -> List[dict]:
         if not enc_data:
             continue
         try:
-            encoding = np.array(enc_data, dtype=np.float64)
+            encoding = np.array(enc_data, dtype=np.float32)
             students.append({
                 "student_id": row["id"],
                 "encoding": encoding,
@@ -40,29 +70,33 @@ def load_face_encodings(class_id: str) -> List[dict]:
 
 
 def generate_face_encoding(image_bytes: bytes) -> Optional[List[float]]:
-    try:
-        image = face_recognition.load_image_file(io.BytesIO(image_bytes))
-    except Exception:
-        try:
-            pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-            image = np.array(pil_image)
-        except Exception as exc:
-            logger.error("Failed to decode image: %s", exc)
-            return None
-
-    try:
-        encodings = face_recognition.face_encodings(image)
-    except Exception as exc:
-        logger.error("face_recognition.face_encodings failed: %s", exc)
+    image = _decode_image(image_bytes)
+    if image is None:
         return None
 
-    if not encodings:
+    height, width = image.shape[:2]
+    detector = _get_detector()
+    detector.setInputSize((width, height))
+    _, faces = detector.detect(image)
+
+    if faces is None or len(faces) == 0:
         logger.warning("No face detected in image")
         return None
 
-    encoding = encodings[0].tolist()
-    logger.info("Generated face encoding with %d dimensions", len(encoding))
-    return encoding
+    face = faces[0]
+    x, y, w, h = map(int, face[:4])
+    face_rect = cv2.Rect(x, y, w, h)
+
+    try:
+        recognizer = _get_recognizer()
+        aligned = recognizer.alignCrop(image, face_rect)
+        features = recognizer.feature(aligned)
+        encoding = features.flatten().tolist()
+        logger.info("Generated face encoding with %d dimensions", len(encoding))
+        return encoding
+    except Exception as exc:
+        logger.error("Face encoding failed: %s", exc)
+        return None
 
 
 def recognize_face(
@@ -73,34 +107,33 @@ def recognize_face(
     if not known_encodings:
         return None
 
-    known_arrays = [e["encoding"] for e in known_encodings]
-
     if isinstance(unknown_encoding, list):
-        unknown_array = np.array(unknown_encoding, dtype=np.float64)
+        unknown_array = np.array(unknown_encoding, dtype=np.float32)
     else:
         unknown_array = unknown_encoding
 
-    try:
-        face_distances = face_recognition.face_distance(known_arrays, unknown_array)
-    except Exception as exc:
-        logger.error("face_distance calculation failed: %s", exc)
-        return None
+    if unknown_array.ndim == 1:
+        unknown_array = unknown_array.reshape(1, -1)
 
-    if len(face_distances) == 0:
-        return None
+    best_id = None
+    best_distance = float("inf")
 
-    best_idx = int(np.argmin(face_distances))
-    best_distance = float(face_distances[best_idx])
+    for entry in known_encodings:
+        known = entry["encoding"]
+        if known.ndim == 1:
+            known = known.reshape(1, -1)
+        try:
+            distance = np.linalg.norm(unknown_array - known)
+        except Exception:
+            continue
+
+        if distance < best_distance:
+            best_distance = distance
+            best_id = entry["student_id"]
 
     if best_distance < tolerance:
-        matched = known_encodings[best_idx]
-        logger.info(
-            "Matched %s %s with distance %.3f",
-            matched["first_name"],
-            matched["last_name"],
-            best_distance,
-        )
-        return matched["student_id"]
+        logger.info("Matched student %s with distance %.3f", best_id, best_distance)
+        return best_id
 
     logger.debug("Closest match distance %.3f exceeds tolerance %.3f", best_distance, tolerance)
     return None

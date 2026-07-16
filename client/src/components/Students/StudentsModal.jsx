@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useModal } from "../../context/ModalContext";
 import { getStudentImageUrl } from "../../lib/api";
+import { supabase } from "../../lib/supabase";
+import toast from "react-hot-toast";
 
 export default function StudentsModal() {
   const { currentStudent, handleToggleStudentModal } = useModal();
   const [imageUrl, setImageUrl] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (currentStudent?.imageUrl) {
@@ -13,6 +16,29 @@ export default function StudentsModal() {
       });
     }
   }, [currentStudent]);
+
+  const handleDelete = async () => {
+    if (!currentStudent?.id || !currentStudent?.classId) return;
+    if (!window.confirm(`Delete ${currentStudent.firstName} ${currentStudent.lastName}?`)) return;
+
+    setDeleting(true);
+    try {
+      if (currentStudent.imageUrl) {
+        await supabase.storage.from("student-images").remove([currentStudent.imageUrl]);
+      }
+      const { error } = await supabase
+        .from("students")
+        .delete()
+        .eq("id", currentStudent.id);
+      if (error) throw error;
+      toast.success("Student deleted.");
+      handleToggleStudentModal(currentStudent);
+    } catch (err) {
+      toast.error("Failed to delete student.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div
@@ -74,7 +100,14 @@ export default function StudentsModal() {
           </p>
         </div>
 
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-between items-center mt-4">
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg focus:outline-none disabled:opacity-50"
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
           <button
             className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg focus:outline-none"
             onClick={() => handleToggleStudentModal(currentStudent)}

@@ -2,14 +2,12 @@ import logging
 import time
 import io
 import base64
-from datetime import date
 
 import socketio
-import face_recognition
+import cv2
 import numpy as np
 from PIL import Image
 
-from server.database import get_service_client
 from server.services.face_service import load_face_encodings, recognize_face
 
 logger = logging.getLogger(__name__)
@@ -53,20 +51,18 @@ async def disconnect(sid):
 async def start_stream(sid, data):
     class_id = data.get("class_id")
     user_id = data.get("user_id")
+    session_id = data.get("session_id")
+
     if not class_id or not user_id:
-        await sio.emit("error", {"message": "class_id and user_id required"}, to=sid)
+        await sio.emit("stream_error", {"message": "class_id and user_id required"}, to=sid)
         return
 
-    encodings = load_face_encodings(class_id)
-    session_name = f"Live Session - {date.today().isoformat()}"
-
-    svc = get_service_client()
-    result = (
-        svc.table("attendance_sessions")
-        .insert({"class_id": class_id, "session_name": session_name})
-        .execute()
-    )
-    session_id = result.data[0]["id"] if result.data else None
+    try:
+        encodings = load_face_encodings(class_id)
+    except Exception as exc:
+        logger.error("Failed to load face encodings: %s", exc)
+        await sio.emit("stream_error", {"message": "Failed to load face encodings"}, to=sid)
+        return
 
     active_streams[sid] = {
         "class_id": class_id,
@@ -119,13 +115,28 @@ async def frame(sid, data):
     if image is None:
         return
 
+    from server.services.model_loader import get_yunet_path, get_sface_path
     try:
-        face_locations = face_recognition.face_locations(image)
-        if not face_locations:
+        height, width = image.shape[:2]
+        detector = cv2.FaceDetectorYN.create(get_yunet_path(), "", (width, height))
+        detector.setInputSize((width, height))
+        _, yunet_faces = detector.detect(image)
+        if yunet_faces is None or len(yunet_faces) == 0:
             return
-        unknown_encodings = face_recognition.face_encodings(image, face_locations)
+        face = yunet_faces[0]
     except Exception as exc:
         logger.error("Face detection error: %s", exc)
+        return
+
+    try:
+        sface_path = get_sface_path()
+        recognizer = cv2.FaceRecognizerSF.create(sface_path, "")
+        x, y, w, h = map(int, face[:4])
+        face_rect = cv2.Rect(x, y, w, h)
+        aligned = recognizer.alignCrop(image, face_rect)
+        unknown_encodings = [recognizer.feature(aligned).flatten()]
+    except Exception as exc:
+        logger.error("Face encoding error: %s", exc)
         return
 
     for unknown_encoding in unknown_encodings:

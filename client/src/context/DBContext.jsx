@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import toast from "react-hot-toast";
 import { toCamelCase, toCamelCaseArray, toSnakeCase } from "../lib/mapper";
 import { getClasses, getStudents, getAttendanceSessions } from "../lib/api";
+import { useAuth } from "./authContext";
 
 const dbContext = createContext();
 
@@ -11,13 +12,20 @@ export function useDB() {
 }
 
 export function DBProvider({ children }) {
+  const { currentUser } = useAuth();
 
   async function MakeClass(subjectCode, offerNumber, description, units) {
     try {
       const { data, error } = await supabase
         .from("classes")
         .insert(
-          toSnakeCase({ subjectCode, offerNumber, description, units: Number(units) })
+          toSnakeCase({
+            userId: currentUser?.id,
+            subjectCode,
+            offerNumber,
+            description,
+            units: Number(units),
+          })
         )
         .select()
         .single();
@@ -83,8 +91,25 @@ export function DBProvider({ children }) {
       if (error) {
         return { status: "error", message: error.message };
       }
+      const newStudent = data;
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.access_token) {
+          fetch(
+            `${apiUrl}/api/classes/${classId}/students/${newStudent.id}/encode`,
+            { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } }
+          ).then(async (res) => {
+            const result = await res.json();
+            if (result.encoding_generated) {
+              toast.success("Face encoding generated.");
+            } else if (result.message) {
+              toast(result.message);
+            }
+          }).catch(() => {});
+        }
+      });
       toast.success("Student added successfully.");
-      return { status: "success", message: "Student added successfully.", data: toCamelCase(data) };
+      return { status: "success", message: "Student added successfully.", data: toCamelCase(newStudent) };
     } catch (err) {
       return { status: "error", message: err.message };
     }

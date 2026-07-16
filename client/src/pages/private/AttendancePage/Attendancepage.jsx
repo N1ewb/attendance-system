@@ -24,67 +24,9 @@ const Attendancepage = () => {
 
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(true);
+  const [connectionFailed, setConnectionFailed] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [presentStudents, setPresentStudents] = useState([]);
-
-  useEffect(() => {
-    const socketUrl = API_URL;
-    const socket = io(socketUrl, {
-      transports: ["websocket"],
-      withCredentials: true,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
-    socketRef.current = socket;
-
-    socket.on("connect", () => {
-      setConnected(true);
-      setConnecting(false);
-    });
-
-    socket.on("disconnect", () => {
-      setConnected(false);
-      setConnecting(true);
-    });
-
-    socket.on("connect_error", () => {
-      setConnecting(false);
-      toast.error("Failed to connect to server.");
-    });
-
-    socket.on("stream_started", (data) => {
-      sessionIdRef.current = data.session_id;
-      setStreaming(true);
-      toast.success("Attendance session started.");
-    });
-
-    socket.on("stream_stopped", () => {
-      setStreaming(false);
-    });
-
-    socket.on("student_detected", (data) => {
-      setPresentStudents((prev) => {
-        if (prev.some((s) => s.student_id === data.student_id)) return prev;
-        const student = {
-          student_id: data.student_id,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          timestamp: data.timestamp,
-        };
-        toast.success(`${data.first_name} ${data.last_name} detected and marked present.`);
-        return [...prev, student];
-      });
-    });
-
-    return () => {
-      stopWebcam();
-      if (socket.connected) {
-        socket.emit("stop_stream");
-      }
-      socket.disconnect();
-    };
-  }, [stopWebcam]);
 
   const startWebcam = useCallback(async () => {
     try {
@@ -128,6 +70,85 @@ const Attendancepage = () => {
     socket.emit("frame", { data: dataUri });
   }, []);
 
+  useEffect(() => {
+    const socketUrl = API_URL;
+    const socket = io(socketUrl, {
+      transports: ["polling", "websocket"],
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 5000,
+    });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      setConnected(true);
+      setConnecting(false);
+      setConnectionFailed(false);
+    });
+
+    socket.on("disconnect", (reason) => {
+      setConnected(false);
+      if (reason !== "io client disconnect") {
+        setConnecting(true);
+      }
+    });
+
+    socket.on("connect_error", (err) => {
+      console.warn("Socket connect_error:", err.message);
+    });
+
+    socket.on("reconnect_attempt", () => {
+      setConnecting(true);
+    });
+
+    socket.on("reconnect_failed", () => {
+      setConnecting(false);
+      setConnectionFailed(true);
+      toast.error(`Could not connect to server at ${socketUrl}. Make sure the server is running.`);
+    });
+
+    socket.on("stream_started", (data) => {
+      sessionIdRef.current = data.session_id;
+      if (data.encodings_loaded === 0) {
+        toast("No students with face encodings found. Detection may not work.");
+      }
+    });
+
+    socket.on("stream_error", (data) => {
+      setStreaming(false);
+      stopWebcam();
+      toast.error(data.message || "Stream failed to start.");
+    });
+
+    socket.on("stream_stopped", () => {
+      setStreaming(false);
+    });
+
+    socket.on("student_detected", (data) => {
+      setPresentStudents((prev) => {
+        if (prev.some((s) => s.student_id === data.student_id)) return prev;
+        const student = {
+          student_id: data.student_id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          timestamp: data.timestamp,
+        };
+        toast.success(`${data.first_name} ${data.last_name} detected and marked present.`);
+        return [...prev, student];
+      });
+    });
+
+    return () => {
+      stopWebcam();
+      if (socket.connected) {
+        socket.emit("stop_stream");
+      }
+      socket.disconnect();
+    };
+  }, [stopWebcam]);
+
   const handleStart = async () => {
     if (!socketRef.current?.connected) {
       toast.error("Not connected to server.");
@@ -145,11 +166,31 @@ const Attendancepage = () => {
     const webcamOk = await startWebcam();
     if (!webcamOk) return;
 
+    const { data: session, error: sessionError } = await supabase
+      .from("attendance_sessions")
+      .insert({
+        class_id: classId,
+        session_name: `Live Session - ${new Date().toLocaleDateString()}`,
+      })
+      .select()
+      .single();
+
+    if (sessionError || !session) {
+      toast.error("Failed to create attendance session: " + (sessionError?.message || "Unknown error"));
+      stopWebcam();
+      return;
+    }
+
+    sessionIdRef.current = session.id;
+    setStreaming(true);
+
     socketRef.current.emit("start_stream", {
       class_id: classId,
       user_id: currentUser.id,
+      session_id: session.id,
     });
 
+    toast.success("Attendance session started.");
     frameIntervalRef.current = setInterval(captureAndSendFrame, 200);
   };
 
@@ -159,6 +200,20 @@ const Attendancepage = () => {
     }
     stopWebcam();
     setStreaming(false);
+  };
+
+  const handleCancel = () => {
+    handleStop();
+
+    const sessionId = sessionIdRef.current;
+    if (sessionId) {
+      supabase.from("attendance_sessions").delete().eq("id", sessionId).then();
+    }
+
+    sessionIdRef.current = null;
+    setPresentStudents([]);
+    toast("Attendance session cancelled.");
+    navigate(`/private/class?id=${classId}`);
   };
 
   const handleFinish = async () => {
@@ -202,10 +257,11 @@ const Attendancepage = () => {
     );
   }
 
-  if (!connected) {
+  if (connectionFailed) {
     return (
       <div className="h-screen w-full pt-24 flex flex-col items-center justify-center gap-4">
-        <p className="text-red-500">Could not connect to server.</p>
+        <p className="text-red-500">Could not connect to server at {API_URL}.</p>
+        <p className="text-gray-500 text-sm">Make sure the Python server is running.</p>
         <button
           className="px-6 py-2 bg-green-700 text-white rounded-md"
           onClick={() => window.location.reload()}
@@ -218,10 +274,16 @@ const Attendancepage = () => {
 
   return (
     <div className="pt-32 h-screen w-full flex flex-col gap-5 px-10 items-center">
-      <header className="w-full flex justify-center items-center">
+      <header className="w-full flex justify-center items-center gap-4">
         <h1 className="text-[32px] font-semibold text-green-950">
           Attendance Page
         </h1>
+        {streaming && (
+          <div className="flex items-center gap-2 bg-green-100 text-green-800 px-4 py-1 rounded-full text-sm font-medium border border-green-300">
+            <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+            Session Active
+          </div>
+        )}
       </header>
 
       <div className="attendance-list-container w-full flex flex-row justify-between">
@@ -234,16 +296,31 @@ const Attendancepage = () => {
             className="w-full h-full object-cover"
           />
           {streaming && (
-            <div className="absolute top-2 right-2 flex items-center gap-2 bg-green-700 text-white px-3 py-1 rounded-full text-sm">
-              <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              Streaming
-            </div>
+            <>
+              <div className="absolute top-2 right-2 flex items-center gap-2 bg-green-700 text-white px-3 py-1 rounded-full text-sm z-10">
+                <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                Live
+              </div>
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-3 left-3 w-8 h-8 border-t-4 border-l-4 border-green-400 rounded-tl" />
+                <div className="absolute top-3 right-3 w-8 h-8 border-t-4 border-r-4 border-green-400 rounded-tr" />
+                <div className="absolute bottom-3 left-3 w-8 h-8 border-b-4 border-l-4 border-green-400 rounded-bl" />
+                <div className="absolute bottom-3 right-3 w-8 h-8 border-b-4 border-r-4 border-green-400 rounded-br" />
+              </div>
+            </>
           )}
           <canvas ref={canvasRef} className="hidden" />
         </div>
 
         <div className="present-students w-[60%] border-solid border-green-700 border-2 rounded-md px-10 py-5">
-          <h2 className="text-lg font-semibold mb-4">Present Students</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Present Students</h2>
+            {streaming && (
+              <span className="text-sm text-gray-500">
+                {presentStudents.length} detected
+              </span>
+            )}
+          </div>
           <div className="flex flex-col gap-3 w-full max-h-[400px] overflow-auto">
             {presentStudents.length > 0 ? (
               presentStudents.map((student) => (
@@ -264,36 +341,45 @@ const Attendancepage = () => {
               ))
             ) : (
               <p className="text-gray-500 text-center py-10">
-                No students detected yet.
+                {streaming ? "No students detected yet." : "Start a session to begin."}
               </p>
             )}
           </div>
         </div>
       </div>
 
-      <div className="actions flex flex-row items-center w-full justify-around">
+      <div className="actions flex flex-row items-center w-full justify-center gap-4">
         {!streaming ? (
           <button
-            className="px-10 py-3 rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+            className="px-10 py-3 rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleStart}
             disabled={!connected}
           >
-            Start Attendance Session
+            {connected ? "Start Attendance Session" : "Connecting..."}
           </button>
         ) : (
-          <button
-            className="px-10 py-3 rounded-md bg-red-600 text-white hover:bg-red-700"
-            onClick={handleStop}
-          >
-            Stop Stream
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={handleFinish}
+              className="px-10 py-3 rounded-md bg-green-600 text-white hover:bg-green-700"
+            >
+              {presentStudents.length > 0
+                ? `Finish (${presentStudents.length} recorded)`
+                : "Finish (no students)"}
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-10 py-3 rounded-md bg-red-600 text-white hover:bg-red-700"
+            >
+              Cancel Session
+            </button>
+          </div>
         )}
         <button
-          onClick={handleFinish}
-          className="px-10 py-3 rounded-md bg-green-600 text-white hover:bg-green-700"
-          disabled={presentStudents.length === 0}
+          onClick={() => navigate(`/private/class?id=${classId}`)}
+          className="px-10 py-3 rounded-md bg-gray-600 text-white hover:bg-gray-700"
         >
-          Finish Attendance Session
+          Back
         </button>
       </div>
     </div>

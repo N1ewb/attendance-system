@@ -77,4 +77,4 @@ async def health_check():
     return {"status": "ok", "version": "1.0.0"}
 
 
-app = ASGIApp(sio, other_app=app)
+app = ASGIApp(sio, other_asgi_app=app)
