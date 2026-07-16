@@ -1,9 +1,37 @@
+# Python
 venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Node
+node_modules/
+client/dist/
+
+# Environment & secrets
+.env
+.env.local
 service-account-key.json
 firebase
-node_modules/
-__pycache__/
+
+# Auto-downloaded models (generated at runtime)
+server/models/sface.onnx
+server/models/yunet.onnx
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Docs reference (not part of source)
 docs
-.env
 .env.example
 scripts

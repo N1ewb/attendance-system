@@ -4,10 +4,13 @@ import { getStudentImageUrl } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
 import toast from "react-hot-toast";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 export default function StudentsModal() {
   const { currentStudent, handleToggleStudentModal } = useModal();
   const [imageUrl, setImageUrl] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [encoding, setEncoding] = useState(false);
 
   useEffect(() => {
     if (currentStudent?.imageUrl) {
@@ -16,6 +19,28 @@ export default function StudentsModal() {
       });
     }
   }, [currentStudent]);
+
+  const handleReEncode = async () => {
+    if (!currentStudent?.id || !currentStudent?.classId) return;
+    setEncoding(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      const res = await fetch(
+        `${API_URL}/api/classes/${currentStudent.classId}/students/${currentStudent.id}/encode`,
+        { method: "POST", headers: { Authorization: `Bearer ${session?.access_token || ""}` } }
+      );
+      const result = await res.json();
+      if (result.encoding_generated) {
+        toast.success("Face encoding generated.");
+      } else {
+        toast(result.message || "Encoding failed.");
+      }
+    } catch {
+      toast.error("Encoding server unreachable at " + API_URL);
+    } finally {
+      setEncoding(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!currentStudent?.id || !currentStudent?.classId) return;
@@ -101,13 +126,24 @@ export default function StudentsModal() {
         </div>
 
         <div className="flex justify-between items-center mt-4">
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg focus:outline-none disabled:opacity-50"
-          >
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg focus:outline-none disabled:opacity-50"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
+            {currentStudent?.imageUrl && (
+              <button
+                onClick={handleReEncode}
+                disabled={encoding}
+                className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none disabled:opacity-50"
+              >
+                {encoding ? "Encoding..." : "Re-encode"}
+              </button>
+            )}
+          </div>
           <button
             className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg focus:outline-none"
             onClick={() => handleToggleStudentModal(currentStudent)}

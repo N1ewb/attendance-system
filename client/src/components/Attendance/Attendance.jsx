@@ -17,6 +17,8 @@ function Attendance({ id }) {
         setAttendance(event.data);
       } else if (event.type === "INSERT") {
         setAttendance((prev) => [event.data, ...prev]);
+      } else if (event.type === "DELETE") {
+        setAttendance((prev) => prev.filter((s) => s.id !== event.data.id));
       }
     });
     return () => unsubscribe();

@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDB } from "../../context/DBContext";
 import AddStudentModal from "../modal/AddStudentModal";
 import { useModal } from "../../context/ModalContext";
+import { getStudents } from "../../lib/api";
+import { toCamelCaseArray } from "../../lib/mapper";
 
 const Students = ({ id }) => {
   const db = useDB();
-  const { handleToggleStudentModal } = useModal();
+  const { currentStudent, handleToggleStudentModal } = useModal();
   const [show, setShow] = useState(false);
   const handleShow = () => setShow(true);
   const [students, setStudents] = useState([]);
@@ -27,6 +29,16 @@ const Students = ({ id }) => {
     });
     return () => unsubscribe();
   }, [db, id]);
+
+  const prevModalOpen = useRef(!!currentStudent);
+  useEffect(() => {
+    if (prevModalOpen.current && !currentStudent && id) {
+      getStudents(id).then(({ data }) => {
+        if (data) setStudents(toCamelCaseArray(data));
+      });
+    }
+    prevModalOpen.current = !!currentStudent;
+  }, [currentStudent, id]);
 
   return (
     <div className="w-full h-full">

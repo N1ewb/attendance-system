@@ -94,19 +94,26 @@ export function DBProvider({ children }) {
       const newStudent = data;
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
       supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.access_token) {
-          fetch(
-            `${apiUrl}/api/classes/${classId}/students/${newStudent.id}/encode`,
-            { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } }
-          ).then(async (res) => {
-            const result = await res.json();
-            if (result.encoding_generated) {
-              toast.success("Face encoding generated.");
-            } else if (result.message) {
-              toast(result.message);
-            }
-          }).catch(() => {});
+        if (!session?.access_token) {
+          toast.error("No auth token — face encoding skipped.");
+          return;
         }
+        const encToast = toast.loading("Generating face encoding...");
+        fetch(
+          `${apiUrl}/api/classes/${classId}/students/${newStudent.id}/encode`,
+          { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } }
+        ).then(async (res) => {
+          const result = await res.json();
+          toast.dismiss(encToast);
+          if (result.encoding_generated) {
+            toast.success("Face encoding generated.");
+          } else {
+            toast(result.message || "Encoding failed.");
+          }
+        }).catch((err) => {
+          toast.dismiss(encToast);
+          toast.error("Encoding server unreachable at " + apiUrl);
+        });
       });
       toast.success("Student added successfully.");
       return { status: "success", message: "Student added successfully.", data: toCamelCase(newStudent) };
@@ -208,6 +215,8 @@ export function DBProvider({ children }) {
       const handler = (payload) => {
         if (payload.eventType === "INSERT") {
           onChange({ type: "INSERT", data: toCamelCase(payload.new) });
+        } else if (payload.eventType === "DELETE") {
+          onChange({ type: "DELETE", data: { id: payload.old.id } });
         }
       };
 
@@ -216,7 +225,7 @@ export function DBProvider({ children }) {
         .on(
           "postgres_changes",
           {
-            event: "INSERT",
+            event: "*",
             schema: "public",
             table: "attendance_sessions",
             filter: `class_id=eq.${classId}`,

@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+models/sface.onnx
+models/yunet.onnx
+*.log
+.env
