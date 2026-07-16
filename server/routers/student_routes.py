@@ -1,9 +1,9 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
-from server.database import get_supabase, get_service_client
+from server.database import get_supabase
 from server.models.student_schema import StudentCreate, StudentResponse, StudentUpdate
-from server.middleware.auth_middleware import get_current_user
+from server.middleware.auth_middleware import get_current_user, get_access_token
 from server.services.face_service import generate_face_encoding
 from server.services.storage_service import get_signed_url
 from typing import List
@@ -107,7 +107,10 @@ async def encode_student_face(
     student_id: str,
     db: Client = Depends(get_supabase),
     user_id: str = Depends(get_current_user),
+    token: str = Depends(get_access_token),
 ):
+    db.auth.set_session(token, "")
+
     result = (
         db.table("students")
         .select("*")
@@ -149,8 +152,7 @@ async def encode_student_face(
             "message": "No face detected in image.",
         }
 
-    svc = get_service_client()
-    svc.table("students").update({"face_encoding": encoding}).eq("id", student_id).execute()
+    db.table("students").update({"face_encoding": encoding}).eq("id", student_id).execute()
 
     return {
         "status": "success",
@@ -164,7 +166,10 @@ async def encode_all_students(
     class_id: str,
     db: Client = Depends(get_supabase),
     user_id: str = Depends(get_current_user),
+    token: str = Depends(get_access_token),
 ):
+    db.auth.set_session(token, "")
+
     result = (
         db.table("students")
         .select("id, first_name, last_name, image_url")
@@ -203,8 +208,7 @@ async def encode_all_students(
                 errors.append(f"{student.get('first_name')} {student.get('last_name')}: no face detected")
                 continue
 
-            svc = get_service_client()
-            svc.table("students").update({"face_encoding": encoding}).eq("id", student["id"]).execute()
+            db.table("students").update({"face_encoding": encoding}).eq("id", student["id"]).execute()
             success += 1
         except Exception as exc:
             failed += 1

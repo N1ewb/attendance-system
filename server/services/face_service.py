@@ -39,10 +39,12 @@ def _decode_image(image_bytes: bytes) -> Optional[np.ndarray]:
         return None
 
 
-def load_face_encodings(class_id: str) -> List[dict]:
-    from server.database import get_service_client
+def load_face_encodings(class_id: str, access_token: str = "") -> List[dict]:
+    from server.database import get_supabase
 
-    db = get_service_client()
+    db = get_supabase()
+    if access_token:
+        db.auth.set_session(access_token, "")
     result = (
         db.table("students")
         .select("id, first_name, last_name, face_encoding")

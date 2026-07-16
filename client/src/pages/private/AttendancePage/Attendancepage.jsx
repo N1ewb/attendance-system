@@ -184,10 +184,13 @@ const Attendancepage = () => {
     sessionIdRef.current = session.id;
     setStreaming(true);
 
-    socketRef.current.emit("start_stream", {
-      class_id: classId,
-      user_id: currentUser.id,
-      session_id: session.id,
+    supabase.auth.getSession().then(({ data: { session: authSession } }) => {
+      socketRef.current?.emit("start_stream", {
+        class_id: classId,
+        user_id: currentUser.id,
+        session_id: session.id,
+        access_token: authSession?.access_token || "",
+      });
     });
 
     toast.success("Attendance session started.");

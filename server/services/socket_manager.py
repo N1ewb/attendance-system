@@ -52,13 +52,14 @@ async def start_stream(sid, data):
     class_id = data.get("class_id")
     user_id = data.get("user_id")
     session_id = data.get("session_id")
+    access_token = data.get("access_token", "")
 
     if not class_id or not user_id:
         await sio.emit("stream_error", {"message": "class_id and user_id required"}, to=sid)
         return
 
     try:
-        encodings = load_face_encodings(class_id)
+        encodings = load_face_encodings(class_id, access_token)
     except Exception as exc:
         logger.error("Failed to load face encodings: %s", exc)
         await sio.emit("stream_error", {"message": "Failed to load face encodings"}, to=sid)

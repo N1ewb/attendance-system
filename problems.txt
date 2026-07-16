@@ -3,3 +3,5 @@ Mobile responsiveness - minimal
 Landing page design is bad - not mdern/ minimalistic
 UI is bad - Use shadcn
 what hapends when multiple students get added one after another. does the /encode get called everytime, what impact will this do to thesystem performarnce, is there a efficient way to handle this
+add delete session button
+fix copy writing

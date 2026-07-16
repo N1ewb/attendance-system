@@ -3,6 +3,7 @@ import { useModal } from "../../context/ModalContext";
 import { getAttendanceRecords } from "../../lib/api";
 import { toCamelCaseArray } from "../../lib/mapper";
 import { toast } from "react-hot-toast";
+import { supabase } from "../../lib/supabase";
 import * as XLSX from "xlsx";
 
 export default function AttendanceModal() {
@@ -21,6 +22,27 @@ export default function AttendanceModal() {
       setLoading(false);
     });
   }, [currentAttendance?.id]);
+
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteSession = async () => {
+    if (!currentAttendance?.id) return;
+    if (!window.confirm("Delete this attendance session and all its records?")) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("attendance_sessions")
+        .delete()
+        .eq("id", currentAttendance.id);
+      if (error) throw error;
+      toast.success("Session deleted.");
+      handleToggleAttendanceModal(null);
+    } catch {
+      toast.error("Failed to delete session.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleExportToExcel = () => {
     if (records.length === 0) {
@@ -108,14 +130,23 @@ export default function AttendanceModal() {
         )}
 
         <div className="flex justify-between mt-4">
+          <div className="flex gap-2">
+            <button
+              className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+              onClick={handleExportToExcel}
+            >
+              Export to Excel
+            </button>
+            <button
+              onClick={handleDeleteSession}
+              disabled={deleting}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
+          </div>
           <button
-            className="px-4 py-2 bg-green-500 text-white rounded-md"
-            onClick={handleExportToExcel}
-          >
-            Export to Excel
-          </button>
-          <button
-            className="px-4 py-2 bg-red-500 text-white rounded-md"
+            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
             onClick={() => handleToggleAttendanceModal(null)}
           >
             Close
