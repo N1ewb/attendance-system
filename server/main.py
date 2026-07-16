@@ -4,8 +4,10 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from socketio import ASGIApp
 from server.config import get_settings
 from server.routers import auth_routes, class_routes, student_routes, attendance_routes
+from server.services.socket_manager import sio
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,3 +75,6 @@ app.include_router(attendance_routes.router)
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "version": "1.0.0"}
+
+
+app = ASGIApp(sio, other_app=app)

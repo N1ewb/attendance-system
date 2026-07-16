@@ -1,4 +1,4 @@
-from supabase import Client
+from typing import Optional
 from server.database import get_supabase
 import logging
 
@@ -21,9 +21,16 @@ def delete_student_image(file_name: str) -> None:
     db.storage.from_("student-images").remove([file_name])
 
 
-def get_signed_url(file_name: str, expiry: int = 3600) -> str:
+def get_signed_url(file_name: str, expiry: int = 3600) -> Optional[str]:
     db = get_supabase()
-    result = db.storage.from_("student-images").create_signed_url(
-        path=file_name, expires_in=expiry
-    )
-    return result["signedURL"]
+    try:
+        result = db.storage.from_("student-images").create_signed_url(
+            path=file_name, expires_in=expiry
+        )
+        return result["signedUrl"]
+    except KeyError:
+        logger.error("Supabase returned unexpected signed URL format for %s", file_name)
+        return None
+    except Exception as exc:
+        logger.error("Failed to create signed URL for %s: %s", file_name, exc)
+        return None

@@ -1,248 +1,220 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { io, Socket } from "socket.io-client";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { io } from "socket.io-client";
 import { useAuth } from "../../../context/authContext";
-import { useDB } from "../../../context/DBContext";
+import { supabase } from "../../../lib/supabase";
 import toast from "react-hot-toast";
-import debounce from "lodash/debounce";
+
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const Attendancepage = () => {
-  const db = useDB();
   const { currentUser } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
-  const classid = queryParams.get("id");
+  const classId = queryParams.get("id");
+
   const videoRef = useRef(null);
-  const [socket, setSocket] = useState(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [imageSrc, setImageSrc] = useState(null);
-  const [presentStudent, setPresentStudents] = useState([]);
-  const [studentCache, setStudentCache] = useState({});
-  const attendanceSessionRef = useRef();
+  const canvasRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const frameIntervalRef = useRef(null);
+  const socketRef = useRef(null);
+  const sessionIdRef = useRef(null);
 
-  const handleStudentData = useCallback((data) => {
-    if (data && data.data) {
-      try {
-        const newStudent = JSON.parse(data.data);
-
-        setPresentStudents((prevStudents) => {
-          const studentSet = new Set(prevStudents.map((s) => s.id));
-
-          if (!studentSet.has(newStudent.id)) {
-            return [...prevStudents, newStudent];
-          }
-          return prevStudents;
-        });
-      } catch (error) {
-        console.error("Error parsing student data:", error);
-      }
-    }
-  }, []);
+  const [connected, setConnected] = useState(false);
+  const [connecting, setConnecting] = useState(true);
+  const [streaming, setStreaming] = useState(false);
+  const [presentStudents, setPresentStudents] = useState([]);
 
   useEffect(() => {
-    const socketURL =
-      window.location.hostname === "localhost"
-        ? "http://127.0.0.1:5000"
-        : window.location.origin;
-
-    const newSocket = io(socketURL, {
+    const socketUrl = API_URL;
+    const socket = io(socketUrl, {
       transports: ["websocket"],
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
+    socketRef.current = socket;
 
-    const handleConnect = () => {
-      console.log("Connected to server");
-      setSocket(newSocket);
-    };
+    socket.on("connect", () => {
+      setConnected(true);
+      setConnecting(false);
+    });
 
-    const handleDisconnect = () => {
-      console.log("Disconnected from server");
-      setSocket(null);
-    };
+    socket.on("disconnect", () => {
+      setConnected(false);
+      setConnecting(true);
+    });
 
-    newSocket.on("connect", handleConnect);
-    newSocket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", () => {
+      setConnecting(false);
+      toast.error("Failed to connect to server.");
+    });
+
+    socket.on("stream_started", (data) => {
+      sessionIdRef.current = data.session_id;
+      setStreaming(true);
+      toast.success("Attendance session started.");
+    });
+
+    socket.on("stream_stopped", () => {
+      setStreaming(false);
+    });
+
+    socket.on("student_detected", (data) => {
+      setPresentStudents((prev) => {
+        if (prev.some((s) => s.student_id === data.student_id)) return prev;
+        const student = {
+          student_id: data.student_id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          timestamp: data.timestamp,
+        };
+        toast.success(`${data.first_name} ${data.last_name} detected and marked present.`);
+        return [...prev, student];
+      });
+    });
 
     return () => {
-      newSocket.off("connect", handleConnect);
-      newSocket.off("disconnect", handleDisconnect);
-      newSocket.disconnect();
+      stopWebcam();
+      if (socket.connected) {
+        socket.emit("stop_stream");
+      }
+      socket.disconnect();
     };
+  }, [stopWebcam]);
+
+  const startWebcam = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      mediaStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      return true;
+    } catch {
+      toast.error("Camera access denied. Please allow camera permissions.");
+      return false;
+    }
   }, []);
 
-  const debouncedHandleStart = useCallback(
-    debounce(() => {
-      if (socket && socket.connected && classid) {
-        const userID = currentUser.uid;
-        socket.emit("start_stream", { classid, userID });
-        setIsStreaming(true);
-      }
-    }, 300),
-    [socket, classid, currentUser]
-  );
-
-  const debouncedHandleStop = useCallback(
-    debounce(() => {
-      if (socket) {
-        socket.emit("stop_stream");
-        setIsStreaming(false);
-        if (videoRef.current) {
-          videoRef.current.src = null;
-        }
-        setImageSrc(null);
-      }
-    }, 300),
-    [socket]
-  );
-
-  useEffect(() => {
-    if (currentUser && socket && socket.connected && classid) {
-      const userID = currentUser.uid;
-
-      if (studentCache[classid]) {
-        return;
-      }
-
-      socket.emit("load_student_data", userID, classid);
-      socket.on("student_data_loaded", (data) => {
-        setStudentCache((prev) => ({
-          ...prev,
-          [classid]: data,
-        }));
-      });
+  const stopWebcam = useCallback(() => {
+    if (frameIntervalRef.current) {
+      clearInterval(frameIntervalRef.current);
+      frameIntervalRef.current = null;
     }
-  }, [socket, classid, currentUser]);
-
-  useEffect(() => {
-    if (socket && isStreaming) {
-      console.log("Setting up video_data Listener");
-
-      socket.on("video_data", (data) => {
-        if (data && data.data) {
-          const byteCharacters = atob(data.data);
-          const byteNumbers = new Uint8Array(byteCharacters.length);
-
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-
-          const blob = new Blob([byteNumbers], { type: "image/jpeg" });
-
-          if (videoRef.current) {
-            videoRef.current.src = URL.createObjectURL(blob);
-            videoRef.current.onload = () => {
-              URL.revokeObjectURL(videoRef.current.src);
-            };
-          }
-        } else {
-          console.error("Received data is not valid:", data);
-        }
-      });
-
-      return () => {
-        socket.off("video_data");
-      };
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
     }
-  }, [socket, isStreaming]);
-
-  useEffect(() => {
-    if (socket && isStreaming) {
-      const videoDataHandler = (data) => {};
-
-      const studentsDataHandler = handleStudentData;
-
-      socket.on("video_data", videoDataHandler);
-      socket.on("students_data", studentsDataHandler);
-
-      return () => {
-        socket.off("video_data", videoDataHandler);
-        socket.off("students_data", studentsDataHandler);
-      };
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
-  }, [socket, isStreaming, handleStudentData]);
+  }, []);
 
-  useEffect(() => {
-    if (currentUser && socket && socket.connected && classid) {
-      const userID = currentUser.uid;
-      socket.emit("load_student_data", userID, classid);
-      socket.emit("load_images");
+  const captureAndSendFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const socket = socketRef.current;
+    if (!video || !canvas || !socket || !socket.connected) return;
+
+    canvas.width = 320;
+    canvas.height = 240;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, 320, 240);
+    const dataUri = canvas.toDataURL("image/jpeg", 0.5);
+    socket.emit("frame", { data: dataUri });
+  }, []);
+
+  const handleStart = async () => {
+    if (!socketRef.current?.connected) {
+      toast.error("Not connected to server.");
+      return;
     }
-  }, [socket, classid, currentUser]);
-
-  const handleStart = () => {
-    if (socket && socket.connected && classid) {
-      console.log("Starting Stream...");
-      const userID = currentUser.uid;
-
-      socket.emit("start_stream", { classid, userID });
-      setIsStreaming(true);
-    } else {
-      console.log("Socket not connected, cant start stream");
+    if (!classId) {
+      toast.error("No class selected.");
+      return;
     }
+    if (!currentUser) {
+      toast.error("You must be logged in.");
+      return;
+    }
+
+    const webcamOk = await startWebcam();
+    if (!webcamOk) return;
+
+    socketRef.current.emit("start_stream", {
+      class_id: classId,
+      user_id: currentUser.id,
+    });
+
+    frameIntervalRef.current = setInterval(captureAndSendFrame, 200);
   };
-
-  useEffect(() => {
-    if (socket) {
-      socket.on("connect_error", (error) => {
-        console.error("Connection Error:", error);
-        toast.error("Connection error: ", error);
-      });
-
-      socket.on("reconnect", (attemptNumber) => {
-        console.log(`Reconnected on attempt: ${attemptNumber}`);
-
-        socket.emit("load_student_data", currentUser.uid, classid);
-        socket.emit("load_images");
-      });
-    }
-  }, [socket, currentUser, classid]);
 
   const handleStop = () => {
-    if (socket) {
-      console.log("Stopping stream...");
-      socket.emit("stop_stream");
-      setIsStreaming(false);
-      videoRef.current.src = null;
-      setImageSrc(null);
-    } else {
-      console.log("Socket not available, cant stop stream");
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("stop_stream");
     }
+    stopWebcam();
+    setStreaming(false);
   };
 
-  const handleCreateAttendance = async () => {
+  const handleFinish = async () => {
+    handleStop();
+
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || presentStudents.length === 0) {
+      toast.error("No students to record.");
+      navigate(`/private/class?id=${classId}`);
+      return;
+    }
+
     try {
-      if (currentUser) {
-        if (presentStudent.length !== 0) {
-          const attendanceSession = attendanceSessionRef.current.value;
-          if (attendanceSession) {
-            await db.RecordAttendance(
-              classid,
-              attendanceSession,
-              presentStudent
-            );
-          }
+      for (const student of presentStudents) {
+        const { error: insertError } = await supabase
+          .from("attendance_records")
+          .insert({
+            session_id: sessionId,
+            student_id: student.student_id,
+          });
+        if (!insertError) {
+          await supabase.rpc("increment_attendance", {
+            p_student_id: student.student_id,
+          });
         }
       }
-    } catch (error) {
-    } finally {
-      handleStop();
+
+      toast.success(`Attendance recorded for ${presentStudents.length} students.`);
+    } catch {
+      toast.error("Failed to record attendance.");
     }
+
+    navigate(`/private/class?id=${classId}`);
   };
-  const options = {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  };
-  const formattedDate = (date) => {
-    return date.toLocaleString("en-US", options);
-  };
+
+  if (connecting) {
+    return (
+      <div className="h-screen w-full pt-24 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-700" />
+      </div>
+    );
+  }
+
+  if (!connected) {
+    return (
+      <div className="h-screen w-full pt-24 flex flex-col items-center justify-center gap-4">
+        <p className="text-red-500">Could not connect to server.</p>
+        <button
+          className="px-6 py-2 bg-green-700 text-white rounded-md"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-32 h-screen w-full flex flex-col gap-5 px-10 items-center">
@@ -251,65 +223,75 @@ const Attendancepage = () => {
           Attendance Page
         </h1>
       </header>
+
       <div className="attendance-list-container w-full flex flex-row justify-between">
-        <div className="display w-[640px] h-[480px] border-solid border-green-700 border-2 rounded-md">
-          <img
+        <div className="relative w-[640px] h-[480px] border-solid border-green-700 border-2 rounded-md overflow-hidden">
+          <video
             ref={videoRef}
-            src={imageSrc}
-            alt="Video Stream"
-            className="w-full h-full"
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
           />
+          {streaming && (
+            <div className="absolute top-2 right-2 flex items-center gap-2 bg-green-700 text-white px-3 py-1 rounded-full text-sm">
+              <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+              Streaming
+            </div>
+          )}
+          <canvas ref={canvasRef} className="hidden" />
         </div>
-        <div className="present-students w-[60%]  border-solid border-green-700 border-2 rounded-md px-10 py-5">
-          <div className="input-group flex flex-col [&_input]:border-green-600 [&_input]:border-solid [&_input]:border-[1px] [&_input]:">
-            <label htmlFor="attendance-session">Attendance Session Name</label>
-            <input
-              type="text"
-              id="attendance-session"
-              ref={attendanceSessionRef}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-3 w-full">
-            {presentStudent.length !== 0
-              ? presentStudent.map((student, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-row justify-between w-full p-5 shadow-md rounded-md gap-5"
-                  >
-                    <p>
-                      {student.firstName} {student.lastName}
-                    </p>
-                    <p>
-                      Status: <span className="text-green-700">Present</span>
-                    </p>
-                    <p>
-                      Timestamp{" "}
-                      <span>{formattedDate(student.last_attendance_time)}</span>
-                    </p>
-                    <div className="wrapper h-[80px] w-[80px]">
-                      <img
-                        src={student.studentImage}
-                        alt="Student Photo"
-                        className="object-center object-fill h-full w-full"
-                      />
-                    </div>
-                  </div>
-                ))
-              : "No Students attended yet"}
+
+        <div className="present-students w-[60%] border-solid border-green-700 border-2 rounded-md px-10 py-5">
+          <h2 className="text-lg font-semibold mb-4">Present Students</h2>
+          <div className="flex flex-col gap-3 w-full max-h-[400px] overflow-auto">
+            {presentStudents.length > 0 ? (
+              presentStudents.map((student) => (
+                <div
+                  key={student.student_id}
+                  className="flex flex-row justify-between w-full p-5 shadow-md rounded-md gap-5 items-center"
+                >
+                  <p className="font-medium">
+                    {student.first_name} {student.last_name}
+                  </p>
+                  <p>
+                    Status: <span className="text-green-700 font-semibold">Present</span>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {new Date(student.timestamp * 1000).toLocaleTimeString()}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-10">
+                No students detected yet.
+              </p>
+            )}
           </div>
         </div>
       </div>
+
       <div className="actions flex flex-row items-center w-full justify-around">
+        {!streaming ? (
+          <button
+            className="px-10 py-3 rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+            onClick={handleStart}
+            disabled={!connected}
+          >
+            Start Attendance Session
+          </button>
+        ) : (
+          <button
+            className="px-10 py-3 rounded-md bg-red-600 text-white hover:bg-red-700"
+            onClick={handleStop}
+          >
+            Stop Stream
+          </button>
+        )}
         <button
-          className="px-10 py-3 rounded-md bg-green-600 text-white"
-          onClick={handleStart}
-        >
-          Start Attendance Session
-        </button>
-        <button
-          onClick={handleCreateAttendance}
-          className="px-10 py-3 rounded-md bg-green-600 text-white"
+          onClick={handleFinish}
+          className="px-10 py-3 rounded-md bg-green-600 text-white hover:bg-green-700"
+          disabled={presentStudents.length === 0}
         >
           Finish Attendance Session
         </button>

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from supabase import Client
-from server.database import get_supabase
+from server.database import get_supabase, get_service_client
 from server.models.attendance_schema import (
     AttendanceSessionCreate,
     AttendanceSessionResponse,
@@ -11,6 +12,16 @@ from server.middleware.auth_middleware import get_current_user
 from typing import List
 
 router = APIRouter(prefix="/api/classes/{class_id}/attendance", tags=["attendance"])
+
+
+class FinalizeRequest(BaseModel):
+    student_ids: List[str]
+
+
+class FinalizeResponse(BaseModel):
+    session_id: str
+    records_created: int
+    students: List[dict]
 
 
 @router.get("/sessions", response_model=List[AttendanceSessionResponse])
@@ -94,3 +105,41 @@ async def mark_attendance(
     if not result.data:
         raise HTTPException(status_code=400, detail="Failed to mark attendance")
     return result.data[0]
+
+
+@router.post("/sessions/{session_id}/finalize", response_model=FinalizeResponse)
+async def finalize_session(
+    class_id: str,
+    session_id: str,
+    body: FinalizeRequest,
+    user_id: str = Depends(get_current_user),
+):
+    svc = get_service_client()
+
+    session_result = (
+        svc.table("attendance_sessions")
+        .select("id")
+        .eq("id", session_id)
+        .eq("class_id", class_id)
+        .single()
+        .execute()
+    )
+    if not session_result.data:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    created = []
+    for student_id in body.student_ids:
+        record = (
+            svc.table("attendance_records")
+            .insert({"session_id": session_id, "student_id": student_id})
+            .execute()
+        )
+        if record.data:
+            svc.rpc("increment_attendance", {"p_student_id": student_id}).execute()
+            created.append(record.data[0])
+
+    return FinalizeResponse(
+        session_id=session_id,
+        records_created=len(created),
+        students=created,
+    )
