@@ -7,7 +7,7 @@ $clientJob = Start-Job -ScriptBlock {
 
 $serverJob = Start-Job -ScriptBlock {
   Set-Location "$using:root"
-  python -m uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
+  python -m uvicorn server.main:app --reload --host :: --port 8000
 }
 
 Write-Host "=== Attendance System ===" -ForegroundColor Green

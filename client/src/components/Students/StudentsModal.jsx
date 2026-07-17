@@ -35,8 +35,9 @@ export default function StudentsModal() {
       } else {
         toast(result.message || "Encoding failed.");
       }
-    } catch {
-      toast.error("Encoding server unreachable at " + API_URL);
+    } catch (err) {
+      console.error("Encoding server error:", err);
+      toast.error("Encoding failed: " + (err.message || "unreachable"));
     } finally {
       setEncoding(false);
     }

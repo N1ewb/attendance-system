@@ -133,7 +133,7 @@ async def frame(sid, data):
         sface_path = get_sface_path()
         recognizer = cv2.FaceRecognizerSF.create(sface_path, "")
         x, y, w, h = map(int, face[:4])
-        face_rect = cv2.Rect(x, y, w, h)
+        face_rect = np.array([x, y, w, h], dtype=np.int32)
         aligned = recognizer.alignCrop(image, face_rect)
         unknown_encodings = [recognizer.feature(aligned).flatten()]
     except Exception as exc:

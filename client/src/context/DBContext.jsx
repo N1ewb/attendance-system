@@ -112,7 +112,8 @@ export function DBProvider({ children }) {
           }
         }).catch((err) => {
           toast.dismiss(encToast);
-          toast.error("Encoding server unreachable at " + apiUrl);
+          console.error("Encoding server error:", err);
+          toast.error("Encoding failed: " + (err.message || "unreachable"));
         });
       });
       toast.success("Student added successfully.");

@@ -87,7 +87,7 @@ def generate_face_encoding(image_bytes: bytes) -> Optional[List[float]]:
 
     face = faces[0]
     x, y, w, h = map(int, face[:4])
-    face_rect = cv2.Rect(x, y, w, h)
+    face_rect = np.array([x, y, w, h], dtype=np.int32)
 
     try:
         recognizer = _get_recognizer()
