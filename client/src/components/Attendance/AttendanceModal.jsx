@@ -5,6 +5,7 @@ import { toCamelCaseArray } from "../../lib/mapper";
 import { toast } from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 import * as XLSX from "xlsx";
+import { Button } from "../ui";
 
 export default function AttendanceModal() {
   const { currentAttendance, handleToggleAttendanceModal } = useModal();
@@ -129,28 +130,32 @@ export default function AttendanceModal() {
           </p>
         )}
 
-        <div className="flex justify-between mt-4">
+        <div className="flex justify-between mt-4 flex-wrap gap-2">
           <div className="flex gap-2">
-            <button
-              className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+            <Button
+              variant="primary"
+              className="bg-green-600 hover:bg-green-700"
               onClick={handleExportToExcel}
+              size="sm"
             >
               Export to Excel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="danger"
               onClick={handleDeleteSession}
-              disabled={deleting}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              loading={deleting}
+              size="sm"
             >
               {deleting ? "Deleting..." : "Delete"}
-            </button>
+            </Button>
           </div>
-          <button
-            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+          <Button
+            variant="secondary"
             onClick={() => handleToggleAttendanceModal(null)}
+            size="sm"
           >
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

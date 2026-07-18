@@ -3,6 +3,7 @@ import { useModal } from "../../context/ModalContext";
 import { getStudentImageUrl } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
 import toast from "react-hot-toast";
+import { Button } from "../ui";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -126,31 +127,34 @@ export default function StudentsModal() {
           </p>
         </div>
 
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex justify-between items-center mt-4 flex-wrap gap-2">
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="danger"
               onClick={handleDelete}
-              disabled={deleting}
-              className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg focus:outline-none disabled:opacity-50"
+              loading={deleting}
+              size="sm"
             >
               {deleting ? "Deleting..." : "Delete"}
-            </button>
+            </Button>
             {currentStudent?.imageUrl && (
-              <button
+              <Button
+                variant="primary"
                 onClick={handleReEncode}
-                disabled={encoding}
-                className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none disabled:opacity-50"
+                loading={encoding}
+                size="sm"
               >
                 {encoding ? "Encoding..." : "Re-encode"}
-              </button>
+              </Button>
             )}
           </div>
-          <button
-            className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg focus:outline-none"
+          <Button
+            variant="secondary"
             onClick={() => handleToggleStudentModal(currentStudent)}
+            size="sm"
           >
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

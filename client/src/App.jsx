@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Layout } from "./layouts/Layout";
@@ -11,10 +12,7 @@ import Class from "./pages/private/class/Class";
 import { ClassDetail } from "./pages/private/classDetail/ClassDetail";
 import Attendancepage from "./pages/private/AttendancePage/Attendancepage";
 import Signup from "./pages/Auth/Signup";
-
-import "bootstrap/dist/css/bootstrap.min.css";
 import { DBProvider } from "./context/DBContext";
-
 import { ModalProvider } from "./context/ModalContext";
 
 const router = createBrowserRouter([
@@ -67,6 +65,27 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
+  useEffect(() => {
+    let deferredPrompt;
+
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    };
+
+    const handleAppInstalled = () => {
+      deferredPrompt = null;
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <DBProvider>

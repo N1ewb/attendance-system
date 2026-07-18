@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
-import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
+import { Modal, Button } from "../ui";
 import { useDB } from "../../context/DBContext";
 
 function AddClassModal({ show, setShow }) {
@@ -46,49 +45,64 @@ function AddClassModal({ show, setShow }) {
     setErrors({});
   };
 
+  const inputClass =
+    "w-full px-3 py-2 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors";
+
   return (
-    <>
-      <Modal show={show} onHide={handleClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>Add a new Class</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <form
-            onSubmit={handleSubmit}
-            className="[&_input]:rounded-lg [&_input]:border-green-950 [&_input]:border-solid [&_input]:border-[1px] flex flex-col items-center w-full"
-          >
-            <div className="input-group flex flex-col gap-2">
-              <label htmlFor="Subject-code">Subject Code</label>
-              <input type="text" id="Subject-code" ref={subjectcodeRef} />
-              {errors.subjectCode && <span className="text-red-500 text-sm">{errors.subjectCode}</span>}
-            </div>
-            <div className="input-group flex flex-col gap-2">
-              <label htmlFor="offer-number">Offer Number</label>
-              <input type="text" id="offer-number" ref={offerNumberRef} />
-              {errors.offerNumber && <span className="text-red-500 text-sm">{errors.offerNumber}</span>}
-            </div>
-            <div className="input-group flex flex-col gap-2">
-              <label htmlFor="description">Description</label>
-              <input type="text" id="description" ref={descriptionRef} />
-              {errors.description && <span className="text-red-500 text-sm">{errors.description}</span>}
-            </div>
-            <div className="input-group flex flex-col gap-2">
-              <label htmlFor="unit">Units</label>
-              <input type="text" id="units" ref={unitsRef} />
-              {errors.units && <span className="text-red-500 text-sm">{errors.units}</span>}
-            </div>
-          </form>
-        </Modal.Body>
-        <Modal.Footer>
+    <Modal
+      isOpen={show}
+      onClose={handleClose}
+      title="Add a new Class"
+      footer={
+        <>
           <Button variant="secondary" onClick={handleClose}>
             Close
           </Button>
-          <Button variant="primary" onClick={handleSubmit} type="submit" disabled={submitting}>
+          <Button variant="primary" onClick={handleSubmit} loading={submitting}>
             {submitting ? "Creating..." : "Submit"}
           </Button>
-        </Modal.Footer>
-      </Modal>
-    </>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="Subject-code" className="text-sm font-medium text-gray-700">
+            Subject Code
+          </label>
+          <input type="text" id="Subject-code" ref={subjectcodeRef} className={inputClass} />
+          {errors.subjectCode && (
+            <span className="text-red-500 text-sm">{errors.subjectCode}</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="offer-number" className="text-sm font-medium text-gray-700">
+            Offer Number
+          </label>
+          <input type="text" id="offer-number" ref={offerNumberRef} className={inputClass} />
+          {errors.offerNumber && (
+            <span className="text-red-500 text-sm">{errors.offerNumber}</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="description" className="text-sm font-medium text-gray-700">
+            Description
+          </label>
+          <input type="text" id="description" ref={descriptionRef} className={inputClass} />
+          {errors.description && (
+            <span className="text-red-500 text-sm">{errors.description}</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="units" className="text-sm font-medium text-gray-700">
+            Units
+          </label>
+          <input type="text" id="units" ref={unitsRef} className={inputClass} />
+          {errors.units && (
+            <span className="text-red-500 text-sm">{errors.units}</span>
+          )}
+        </div>
+      </form>
+    </Modal>
   );
 }
 
