@@ -1,51 +1,51 @@
-import { useState } from "react";
-import { useAuth } from "../../context/authContext";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useAuth } from "../../context/authContext"
 
 export default function UserIcon() {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const { currentUser, Logout } = useAuth();
-
-  const handleLogout = async () => {
-    setIsDropdownOpen(false);
-    await Logout();
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen((prev) => !prev);
-  };
-
-  const initial = currentUser?.email?.charAt(0).toUpperCase() || "?";
+  const { currentUser, Logout } = useAuth()
+  const initial = currentUser?.email?.charAt(0).toUpperCase() || "?"
 
   return (
-    <div className="relative">
-      <button
-        onClick={toggleDropdown}
-        className="flex items-center justify-center w-10 h-10 bg-green-700 rounded-full hover:bg-green-800 focus:outline-none"
-      >
-        <span className="text-white text-lg capitalize">{initial}</span>
-      </button>
-
-      {isDropdownOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg border border-gray-200 z-50">
-          <div className="px-4 py-2 text-gray-700 border-b text-sm truncate">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center justify-center w-10 h-10 rounded-full hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background">
+          <Avatar className="h-10 w-10 bg-green-700">
+            <AvatarFallback className="bg-green-700 text-white text-sm">
+              {initial}
+            </AvatarFallback>
+          </Avatar>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="font-normal">
+          <p className="text-sm font-medium leading-none">Account</p>
+          <p className="text-xs leading-none text-muted-foreground mt-1 truncate">
             {currentUser?.email}
-          </div>
-          <ul className="py-2">
-            <li className="px-4 py-2 text-gray-700 hover:bg-gray-100 cursor-pointer">
-              Profile
-            </li>
-            <li className="px-4 py-2 text-gray-700 hover:bg-gray-100 cursor-pointer">
-              Settings
-            </li>
-            <li
-              className="px-4 py-2 text-red-600 hover:bg-gray-100 cursor-pointer"
-              onClick={handleLogout}
-            >
-              Logout
-            </li>
-          </ul>
-        </div>
-      )}
-    </div>
-  );
+          </p>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer">
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer">
+          Settings
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer text-destructive focus:text-destructive"
+          onClick={() => Logout()}
+        >
+          Logout
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
