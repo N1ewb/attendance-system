@@ -4,6 +4,8 @@ import { useNavigate, Link } from "react-router-dom"
 import Cirlce1 from "../../images/Circle1.png"
 import Cirlce2 from "../../images/Circle2.png"
 import Cirlce3 from "../../images/Circle3.png"
+import backgroundImg from "../../images/background.png"
+import handImg from "../../images/hand.png"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -58,7 +60,7 @@ function Signup() {
   }, [auth.currentUser, auth.loading, navigate])
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center bg-cover bg-center p-4" style={{ backgroundImage: "url('../../images/background.png')" }}>
+    <div className="w-full min-h-screen flex items-center justify-center bg-cover bg-center p-4" style={{ backgroundImage: `url(${backgroundImg})` }}>
       <div className="flex w-full max-w-4xl border-8 border-[#1F1E1E] rounded-lg overflow-hidden shadow-2xl">
         <div className="flex-1 bg-black flex flex-col">
           <div className="flex gap-2 p-3 bg-[#1F1E1E]">
@@ -153,7 +155,7 @@ function Signup() {
           </Card>
         </div>
 
-        <div className="flex-1 bg-black bg-cover bg-center bg-no-repeat relative hidden md:block" style={{ backgroundImage: "url('../../images/hand.png')" }}>
+        <div className="flex-1 bg-black bg-cover bg-center bg-no-repeat relative hidden md:block" style={{ backgroundImage: `url(${handImg})` }}>
           <div className="flex gap-2 p-3 bg-[#1F1E1E]">
             <span className="w-5 h-5" />
           </div>

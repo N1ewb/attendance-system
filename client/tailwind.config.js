@@ -59,10 +59,15 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        glow: {
+          "0%, 50%, 100%": { textShadow: "0 0 5px white, 0 0 10px white, 0 0 15px #701515, 0 0 20px #701515, 0 0 30px #701515" },
+          "25%, 75%": { textShadow: "0 0 10px white, 0 0 20px white, 0 0 25px #701515, 0 0 30px #701515, 0 0 40px #701515" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        glow: "glow 5s infinite",
       },
     },
   },
