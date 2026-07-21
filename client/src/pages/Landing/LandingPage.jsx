@@ -1,5 +1,3 @@
-import React from "react";
-import { Link } from "react-router-dom";
 import about from "../../images/aboutt.png";
 import logo from "../../images/logo.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

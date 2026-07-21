@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Layout } from "./layouts/Layout";
@@ -65,27 +64,6 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  useEffect(() => {
-    let deferredPrompt;
-
-    const handleBeforeInstall = (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-    };
-
-    const handleAppInstalled = () => {
-      deferredPrompt = null;
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
-    window.addEventListener("appinstalled", handleAppInstalled);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
-      window.removeEventListener("appinstalled", handleAppInstalled);
-    };
-  }, []);
-
   return (
     <AuthProvider>
       <DBProvider>

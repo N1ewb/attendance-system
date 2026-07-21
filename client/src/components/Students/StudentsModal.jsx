@@ -37,7 +37,6 @@ export default function StudentsModal() {
         toast(result.message || "Encoding failed.");
       }
     } catch (err) {
-      console.error("Encoding server error:", err);
       toast.error("Encoding failed: " + (err.message || "unreachable"));
     } finally {
       setEncoding(false);
@@ -60,7 +59,7 @@ export default function StudentsModal() {
       if (error) throw error;
       toast.success("Student deleted.");
       handleToggleStudentModal(currentStudent);
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete student.");
     } finally {
       setDeleting(false);

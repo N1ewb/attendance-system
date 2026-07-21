@@ -1,17 +1,30 @@
-const baseClasses = "animate-pulse bg-gray-200";
+import { cn } from "@/lib/utils"
 
 const variantClasses = {
   text: "h-4 rounded",
   circular: "rounded-full",
   rectangular: "rounded-lg",
-};
+}
 
-export function Skeleton({ variant = "text", width, height, className = "" }) {
+function Skeleton({
+  className,
+  variant,
+  width,
+  height,
+  ...props
+}) {
   return (
     <div
-      className={`${baseClasses} ${variantClasses[variant] || variantClasses.text} ${className}`}
+      className={cn(
+        "animate-pulse rounded-md bg-muted",
+        variant && variantClasses[variant],
+        className
+      )}
       style={{ width, height }}
       aria-hidden="true"
+      {...props}
     />
   );
 }
+
+export { Skeleton }
