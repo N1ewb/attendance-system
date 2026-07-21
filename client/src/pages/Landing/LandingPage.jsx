@@ -1,5 +1,7 @@
 import about from "../../images/aboutt.png"
 import logo from "../../images/logo.png"
+import backgroundImg from "../../images/background.png"
+import bgaImg from "../../images/bga.png"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faFacebookF,
@@ -15,7 +17,7 @@ const LandingPage = () => {
     <>
       <div
         className="h-[85vh] bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('../../images/background.png')" }}
+        style={{ backgroundImage: `url(${backgroundImg})` }}
       >
         <h2 className="text-white text-3xl md:text-4xl text-start ml-10 md:ml-[275px] pt-[20%] animate-glow">
           Making things easier
@@ -28,7 +30,7 @@ const LandingPage = () => {
       <section
         id="about"
         className="py-10 px-5 min-h-[95vh] bg-cover"
-        style={{ backgroundImage: "url('../../images/bga.png')" }}
+        style={{ backgroundImage: `url(${bgaImg})` }}
       >
         <div className="flex flex-wrap max-w-[1200px] mx-auto mt-[5%]">
           <div className="w-full md:w-1/2 p-5">
