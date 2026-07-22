@@ -4,7 +4,7 @@ import AddStudentModal from "../modal/AddStudentModal";
 import { useModal } from "../../context/ModalContext";
 import { getStudents } from "../../lib/api";
 import { toCamelCaseArray } from "../../lib/mapper";
-import { Skeleton, EmptyState, Button } from "../ui";
+import { Skeleton, EmptyState, Button, Avatar, AvatarFallback } from "../ui";
 
 const Students = ({ id }) => {
   const db = useDB();
@@ -109,9 +109,11 @@ const Students = ({ id }) => {
               className="w-full flex flex-row gap-5 shadow-sm p-5 rounded-lg cursor-pointer hover:shadow-md transition-shadow min-h-[44px]"
               onClick={() => handleToggleStudentModal(student)}
             >
-              <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold shrink-0">
-                {student.firstName?.charAt(0)}{student.lastName?.charAt(0)}
-              </div>
+              <Avatar className="h-12 w-12 bg-green-100 shrink-0">
+                <AvatarFallback className="bg-green-100 text-green-700 font-bold">
+                  {student.firstName?.charAt(0)}{student.lastName?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex flex-col min-w-0">
                 <p className="font-medium text-gray-800 text-sm truncate">
                   {student.firstName} {student.lastName}

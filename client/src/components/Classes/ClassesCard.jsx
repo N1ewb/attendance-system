@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Skeleton, EmptyState } from "../ui";
+import { Skeleton, EmptyState, Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from "../ui";
 
 function ClassesCard({ classes, loading = false, error = null, onRetry }) {
   const navigate = useNavigate();
@@ -50,22 +50,24 @@ function ClassesCard({ classes, loading = false, error = null, onRetry }) {
       {classes.length !== 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {classes.map((myclass) => (
-            <div
+            <Card
               onClick={() => navigate(`/private/class?id=${myclass.id}`)}
               key={myclass.id}
-              className="flex flex-col items-start gap-3 shadow-sm cursor-pointer rounded-xl bg-white p-6 border border-gray-200 hover:shadow-lg transition-shadow"
+              className="cursor-pointer hover:shadow-lg transition-shadow"
             >
-              <p className="text-lg font-semibold text-gray-800">
-                {myclass.subjectCode}
-              </p>
-              <p className="text-sm text-gray-500">
-                Offer: <span className="text-gray-700">{myclass.offerNumber}</span>
-              </p>
-              <p className="text-sm text-gray-500">{myclass.description}</p>
-              <p className="text-xs text-gray-400 mt-auto">
-                {myclass.units} {myclass.units === 1 ? "unit" : "units"}
-              </p>
-            </div>
+              <CardHeader>
+                <CardTitle className="text-lg">{myclass.subjectCode}</CardTitle>
+                <CardDescription className="text-sm">
+                  Offer: <span className="text-foreground">{myclass.offerNumber}</span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">{myclass.description}</p>
+                <Badge variant="secondary" className="self-start mt-2">
+                  {myclass.units} {myclass.units === 1 ? "unit" : "units"}
+                </Badge>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
